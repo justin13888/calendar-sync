@@ -237,7 +237,7 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
             losses,
         )?;
 
-        let (low, high) = Self::range(series, window, &frame, &place);
+        let spans = Self::spans(series, window, &frame, &place);
 
         // The recurrence set, keyed by instant so duplicates collapse (RFC 5545 section 3.8.5.3).
         let mut set: BTreeMap<Timestamp, Instance> = BTreeMap::new();
@@ -254,7 +254,7 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
         };
         add(first.clone(), &mut set);
         for rule in &rules {
-            for civil in expand_rule(rule, low, high, losses) {
+            for civil in expand_rule(rule, &spans, losses) {
                 add(frame.value_at(civil), &mut set);
             }
         }
@@ -289,7 +289,7 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
             excluded.extend(removed.iter().filter_map(|start| set.remove(start)));
         }
         for rule in &exclusion_rules {
-            for civil in expand_rule(rule, low, high, losses) {
+            for civil in expand_rule(rule, &spans, losses) {
                 if let Some(start) = place.instant(&frame.value_at(civil)) {
                     excluded.extend(set.remove(&start));
                 }
@@ -443,15 +443,19 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
         })
     }
 
-    /// The civil range, in the series' frame, that the rules are expanded over: the window,
-    /// widened by the longest event and the furthest carried shift, and stretched to cover
-    /// every override's key so that each can find its instance.
-    fn range(
+    /// The civil spans, in the series' frame, that the rules are expanded over. The first is the
+    /// window, widened by the longest event and the furthest carried shift. Each other one is
+    /// the neighbourhood of an override's key that lies outside it, where that override moves
+    /// its instance into the window, so that the override can find its instance. A key whose
+    /// override cannot reach the window needs no span: its instance, moved or not, is not shown.
+    /// The spans are kept apart rather than joined, so that a key years before the window does
+    /// not spend the rule's budget on the years between.
+    fn spans(
         series: &EventSeries,
         window: &Window,
         frame: &Frame,
         place: &Place<'_>,
-    ) -> (DateTime, DateTime) {
+    ) -> Vec<(DateTime, DateTime)> {
         let length = |times: &EventTimes| {
             let start = place.instant(times.start());
             let end = times.end().and_then(|end| place.instant(end));
@@ -467,8 +471,10 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
         let mut furthest = SignedDuration::ZERO;
         let mut keys = Vec::new();
         for (key, change) in &series.overrides {
-            keys.push(frame.civil_of(key.original_start(), place));
             if let Override::Modified { event, range } = change {
+                if reaches(&event.fields.times, window, place) {
+                    keys.push(frame.civil_of(key.original_start(), place));
+                }
                 longest = longest.max(length(&event.fields.times));
                 if *range == InstanceRange::ThisAndFuture
                     && let (Some(from), Some(to)) = (
@@ -483,14 +489,33 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
         let reach = SLACK.saturating_add(longest).saturating_add(furthest);
         let low = frame.zone.to_datetime(window.start);
         let high = frame.zone.to_datetime(window.end);
-        let mut low = low.checked_sub(reach).unwrap_or(DateTime::MIN);
-        let mut high = high.checked_add(reach).unwrap_or(DateTime::MAX);
+        let low = low.checked_sub(reach).unwrap_or(DateTime::MIN);
+        let high = high.checked_add(reach).unwrap_or(DateTime::MAX);
+        let mut spans = vec![(low, high)];
         for key in keys.into_iter().flatten() {
-            low = low.min(key.checked_sub(SLACK).unwrap_or(DateTime::MIN));
-            high = high.max(key.checked_add(SLACK).unwrap_or(DateTime::MAX));
+            if (low..=high).contains(&key) {
+                continue;
+            }
+            spans.push((
+                key.checked_sub(SLACK).unwrap_or(DateTime::MIN),
+                key.checked_add(SLACK).unwrap_or(DateTime::MAX),
+            ));
         }
-        (low, high)
+        spans
     }
+}
+
+/// Whether an override's times overlap the window, so that the occurrence it makes is shown.
+fn reaches(times: &EventTimes, window: &Window, place: &Place<'_>) -> bool {
+    let Some(start) = place.instant(times.start()) else {
+        return false;
+    };
+    let end = times
+        .end()
+        .and_then(|end| place.instant(end))
+        .unwrap_or(start)
+        .max(start);
+    window.overlaps(start, end)
 }
 
 /// Pushes an event's start and end.
@@ -818,27 +843,30 @@ fn compile(
     Ok(compiled)
 }
 
-/// A rule's civil instances from `low` to `high`, noting a loss if its budget ran out.
+/// A rule's civil instances within each span, noting a loss for each span whose budget ran out.
 fn expand_rule(
     rule: &CivilRule,
-    low: DateTime,
-    high: DateTime,
+    spans: &[(DateTime, DateTime)],
     losses: &mut Vec<Loss>,
 ) -> Vec<DateTime> {
-    let mut instances = rule.instances(Some(low), high);
-    let found: Vec<DateTime> = instances
-        .by_ref()
-        .filter(|&at| at >= low && at <= high)
-        .collect();
-    if instances.exhausted() {
-        losses.push(Loss::new(
-            Field::Recurrence,
-            LossReason::Unsupported,
-            format!(
-                "expansion stopped after {PERIOD_BUDGET} periods; instances after {} were not expanded",
-                found.last().copied().unwrap_or(rule.start())
-            ),
-        ));
+    let mut all = Vec::new();
+    for &(low, high) in spans {
+        let mut instances = rule.instances(Some(low), high);
+        let found: Vec<DateTime> = instances
+            .by_ref()
+            .filter(|&at| at >= low && at <= high)
+            .collect();
+        if instances.exhausted() {
+            losses.push(Loss::new(
+                Field::Recurrence,
+                LossReason::Unsupported,
+                format!(
+                    "expansion stopped after {PERIOD_BUDGET} periods; instances after {} were not expanded",
+                    found.last().copied().unwrap_or(rule.start())
+                ),
+            ));
+        }
+        all.extend(found);
     }
-    found
+    all
 }

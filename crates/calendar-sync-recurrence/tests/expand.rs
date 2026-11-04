@@ -373,6 +373,78 @@ fn an_override_moving_an_instance_into_the_window_is_found() {
 }
 
 #[test]
+fn an_override_key_far_before_the_window_does_not_use_up_the_budget() {
+    // Expanding a minutely series from 2020 to 2026 would take over three million periods,
+    // and a secondly one from 30 days back over two million: either exhausts the budget.
+    let mut minutely = series(
+        instant("2020-01-01T00:00:00Z"),
+        None,
+        Recurrence::rule(rule(Frequency::Minutely)),
+    );
+    cancelled(&mut minutely, instant("2020-06-01T00:00:00Z"));
+    modified(
+        &mut minutely,
+        instant("2020-07-01T00:00:00Z"),
+        instant("2020-07-01T00:00:30Z"),
+        None,
+        InstanceRange::ThisInstance,
+    );
+    // A key years back whose override moves its instance into the window still finds it.
+    modified(
+        &mut minutely,
+        instant("2021-01-01T00:00:00Z"),
+        instant("2026-01-01T00:00:30Z"),
+        None,
+        InstanceRange::ThisInstance,
+    );
+    let minutes = window("2026-01-01T00:00:00Z", "2026-01-01T00:02:00Z");
+    let expansion = expand(&minutely, "UTC", &minutes);
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    assert_eq!(
+        starts(&expansion),
+        [
+            ts("2026-01-01T00:00:00Z"),
+            ts("2026-01-01T00:00:30Z"),
+            ts("2026-01-01T00:01:00Z"),
+        ]
+    );
+    let moved = &expansion.occurrences[1];
+    assert_eq!(moved.key, InstanceKey::new(instant("2021-01-01T00:00:00Z")));
+    assert_eq!(moved.event.ids.id, "override");
+
+    let mut secondly = series(
+        instant("2025-12-01T00:00:00Z"),
+        None,
+        Recurrence::rule(rule(Frequency::Secondly)),
+    );
+    cancelled(&mut secondly, instant("2025-12-02T00:00:00Z"));
+    let seconds = window("2026-01-01T00:00:00Z", "2026-01-01T00:00:03Z");
+    let expansion = expand(&secondly, "UTC", &seconds);
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    assert_eq!(expansion.occurrences.len(), 3);
+}
+
+#[test]
+fn an_override_far_from_the_window_of_an_excluded_instance_is_not_shown() {
+    let mut recurrence = Recurrence::rule(rule(Frequency::Minutely));
+    recurrence
+        .excluded_dates
+        .push(instant("2021-01-01T00:00:00Z"));
+    let mut series = series(instant("2020-01-01T00:00:00Z"), None, recurrence);
+    modified(
+        &mut series,
+        instant("2021-01-01T00:00:00Z"),
+        instant("2026-01-01T00:00:30Z"),
+        None,
+        InstanceRange::ThisInstance,
+    );
+    let minutes = window("2026-01-01T00:00:00Z", "2026-01-01T00:01:00Z");
+    let expansion = expand(&series, "UTC", &minutes);
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    assert_eq!(starts(&expansion), [ts("2026-01-01T00:00:00Z")]);
+}
+
+#[test]
 fn an_orphan_override_is_shown_and_one_of_an_excluded_instance_is_not() {
     let mut series = weekly_meeting();
     if let Some(master) = &mut series.master
@@ -591,4 +663,80 @@ fn an_expansion_too_long_to_finish_is_reported() {
     assert!(expansion.occurrences.is_empty());
     assert_eq!(expansion.losses[0].reason, LossReason::Unsupported);
     assert!(expansion.losses[0].detail.contains("expansion stopped"));
+}
+
+#[test]
+fn an_all_day_until_beside_a_timed_start_includes_that_whole_day() {
+    let mut daily = rule(Frequency::Daily);
+    daily.end = RuleEnd::Until {
+        until: day("2024-01-03"),
+    };
+    let series = series(floating("2024-01-01T21:00"), None, Recurrence::rule(daily));
+    let expansion = expand(&series, "UTC", &wide());
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    assert_eq!(
+        start_values(&expansion),
+        [
+            floating("2024-01-01T21:00"),
+            floating("2024-01-02T21:00"),
+            floating("2024-01-03T21:00"),
+        ]
+    );
+}
+
+#[test]
+fn an_instance_in_another_frame_than_its_template_keeps_the_exact_length() {
+    // The start is zoned and the end is UTC, so the length is the exact hour, and the end keeps
+    // its UTC form: across the Berlin change on 2024-03-31 the end stays an hour after the start.
+    let utc_end = series(
+        zoned("2024-03-30T09:00", "Europe/Berlin"),
+        Some(instant("2024-03-30T09:00:00Z")),
+        Recurrence::rule(counted(Frequency::Daily, 2)),
+    );
+    let expansion = expand(&utc_end, "UTC", &wide());
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    let ends: Vec<_> = expansion
+        .occurrences
+        .iter()
+        .map(|o| o.times.end().cloned())
+        .collect();
+    assert_eq!(
+        ends,
+        [
+            Some(instant("2024-03-30T09:00:00Z")),
+            Some(instant("2024-03-31T08:00:00Z")),
+        ]
+    );
+
+    // An RDATE in another zone than the series: an hour after it, written in the end's zone.
+    let mut recurrence = Recurrence::rule(counted(Frequency::Daily, 1));
+    recurrence
+        .dates
+        .push(zoned("2024-04-10T09:00", "Asia/Tokyo"));
+    let tokyo_date = series(
+        zoned("2024-04-01T09:00", "Europe/Berlin"),
+        Some(zoned("2024-04-01T10:00", "Europe/Berlin")),
+        recurrence,
+    );
+    let expansion = expand(&tokyo_date, "UTC", &wide());
+    assert!(expansion.losses.is_empty(), "{:?}", expansion.losses);
+    let tokyo = &expansion.occurrences[1];
+    assert_eq!(tokyo.start, ts("2024-04-10T00:00:00Z"));
+    assert_eq!(
+        tokyo.times.end(),
+        Some(&zoned("2024-04-10T03:00", "Europe/Berlin"))
+    );
+    assert_eq!(tokyo.end, ts("2024-04-10T01:00:00Z"));
+}
+
+#[test]
+fn a_leap_second_is_refused_with_a_loss() {
+    let mut daily = counted(Frequency::Daily, 2);
+    daily.by_second = vec![60];
+    let series = series(floating("2024-01-01T09:00"), None, Recurrence::rule(daily));
+    let expansion = expand(&series, "UTC", &wide());
+    assert!(expansion.occurrences.is_empty());
+    assert_eq!(expansion.losses.len(), 1);
+    assert_eq!(expansion.losses[0].reason, LossReason::Unsupported);
+    assert!(expansion.losses[0].detail.contains("leap second"));
 }
