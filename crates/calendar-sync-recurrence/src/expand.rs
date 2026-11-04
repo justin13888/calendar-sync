@@ -844,11 +844,38 @@ fn compile(
 }
 
 /// A rule's civil instances within each span, noting a loss for each span whose budget ran out.
+///
+/// A counted rule is expanded from its start whatever span is asked for, since its count runs
+/// from there, so it is expanded once, to the furthest span's end, and keeps what falls in any
+/// span: one budget and at most one loss, however many spans there are.
 fn expand_rule(
     rule: &CivilRule,
     spans: &[(DateTime, DateTime)],
     losses: &mut Vec<Loss>,
 ) -> Vec<DateTime> {
+    if rule.is_counted() {
+        let Some(horizon) = spans.iter().map(|&(_, high)| high).max() else {
+            return Vec::new();
+        };
+        let mut instances = rule.instances(None, horizon);
+        let mut last = None;
+        let found: Vec<DateTime> = instances
+            .by_ref()
+            .inspect(|&at| last = Some(at))
+            .filter(|&at| spans.iter().any(|&(low, high)| at >= low && at <= high))
+            .collect();
+        if instances.exhausted() {
+            losses.push(Loss::new(
+                Field::Recurrence,
+                LossReason::Unsupported,
+                format!(
+                    "expansion stopped after {PERIOD_BUDGET} periods; instances after {} were not expanded",
+                    last.unwrap_or(rule.start())
+                ),
+            ));
+        }
+        return found;
+    }
     let mut all = Vec::new();
     for &(low, high) in spans {
         let mut instances = rule.instances(Some(low), high);

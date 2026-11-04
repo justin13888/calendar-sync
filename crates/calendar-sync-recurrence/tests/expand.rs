@@ -666,6 +666,37 @@ fn an_expansion_too_long_to_finish_is_reported() {
 }
 
 #[test]
+fn a_counted_rule_is_expanded_once_however_many_far_keys_move_into_the_window() {
+    // A counted rule runs from its start for every span, so each far key moved into the
+    // window would otherwise spend another budget and report the same stop again.
+    let mut secondly = series(
+        instant("1970-01-01T00:00:00Z"),
+        None,
+        Recurrence::rule(counted(Frequency::Secondly, u32::MAX)),
+    );
+    for key in ["1970-01-01T00:00:10Z", "1970-02-01T00:00:00Z"] {
+        modified(
+            &mut secondly,
+            instant(key),
+            instant("2026-01-01T00:00:30Z"),
+            None,
+            InstanceRange::ThisInstance,
+        );
+    }
+    let days = window("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+    let expansion = expand(&secondly, "UTC", &days);
+    assert_eq!(expansion.losses.len(), 1, "{:?}", expansion.losses);
+    assert!(expansion.losses[0].detail.contains("expansion stopped"));
+    // The first key's instance is within the budget, so its override still finds it.
+    assert!(
+        expansion
+            .occurrences
+            .iter()
+            .any(|o| o.key == InstanceKey::new(instant("1970-01-01T00:00:10Z")))
+    );
+}
+
+#[test]
 fn an_all_day_until_beside_a_timed_start_includes_that_whole_day() {
     let mut daily = rule(Frequency::Daily);
     daily.end = RuleEnd::Until {
