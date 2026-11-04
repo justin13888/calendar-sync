@@ -236,11 +236,26 @@ impl Remote for CalDav {
     }
 }
 
-/// The application: it feeds inputs to the engine and performs its requests, in order.
+/// The order in which the application performs the requests it has queued and delivers their
+/// outcomes.
+#[derive(Clone, Copy, Debug)]
+enum Order {
+    /// Oldest first, each outcome delivered as soon as its request is performed.
+    Emitted,
+    /// Each step either performs any queued request or delivers any outcome held back, chosen by
+    /// a generator seeded with this value. The engine may have several requests in flight, and
+    /// nothing makes a provider perform them, or their responses arrive, in order.
+    Shuffled(u64),
+}
+
+/// The application: it feeds inputs to the engine and performs its requests in `order`.
 struct Harness<R> {
     remote: R,
     state: SyncState,
     queue: VecDeque<(RequestId, Request)>,
+    /// Outcomes performed and not yet delivered, in the shuffled order.
+    held: Vec<(RequestId, Outcome)>,
+    order: Order,
     notices: Vec<Notice>,
     edits: u64,
     clock: i64,
@@ -249,10 +264,16 @@ struct Harness<R> {
 
 impl<R: Remote> Harness<R> {
     fn new(plan: FaultPlan) -> Self {
+        Self::ordered(plan, Order::Emitted)
+    }
+
+    fn ordered(plan: FaultPlan, order: Order) -> Self {
         Self {
             remote: R::new(plan),
             state: SyncState::new(),
             queue: VecDeque::new(),
+            held: Vec::new(),
+            order,
             notices: Vec::new(),
             edits: 0,
             clock: 0,
@@ -273,32 +294,64 @@ impl<R: Remote> Harness<R> {
         assert_eq!(back, self.state);
     }
 
-    /// Performs up to `limit` requests, or every request until none is left.
+    /// Performs up to `limit` requests, or every request until none is left, and delivers their
+    /// outcomes.
     fn run(&mut self, limit: Option<usize>) {
         let mut done = 0;
         while limit.is_none_or(|limit| done < limit) {
-            let Some((id, request)) = self.queue.pop_front() else {
-                return;
-            };
-            let outcome = self.remote.perform(&request);
-            self.feed(Input::Outcome {
-                request: id,
-                outcome,
-            });
+            match self.order {
+                Order::Emitted => {
+                    let Some((id, request)) = self.queue.pop_front() else {
+                        return;
+                    };
+                    let outcome = self.remote.perform(&request);
+                    self.deliver(id, outcome);
+                }
+                Order::Shuffled(_) => {
+                    let (queued, held) = (self.queue.len(), self.held.len());
+                    if queued + held == 0 {
+                        return;
+                    }
+                    let pick = self.pick(queued + held);
+                    if pick < queued {
+                        let (id, request) = self.queue.remove(pick).unwrap();
+                        let outcome = self.remote.perform(&request);
+                        self.held.push((id, outcome));
+                    } else {
+                        let (id, outcome) = self.held.swap_remove(pick - queued);
+                        self.deliver(id, outcome);
+                    }
+                }
+            }
             done += 1;
             self.performed += 1;
             assert!(self.performed < MAX_REQUESTS, "the engine did not settle");
         }
     }
 
-    /// The application stops, losing every request not yet performed, and, with `sent`, the
-    /// response to the one it was performing. It reloads the state and resumes.
+    fn deliver(&mut self, request: RequestId, outcome: Outcome) {
+        self.feed(Input::Outcome { request, outcome });
+    }
+
+    /// A number below `below`, from the shuffled order's generator.
+    fn pick(&mut self, below: usize) -> usize {
+        let Order::Shuffled(state) = &mut self.order else {
+            return 0;
+        };
+        let below = u64::try_from(below).unwrap();
+        usize::try_from(splitmix64(state) % below).unwrap()
+    }
+
+    /// The application stops, losing every request not yet performed and every outcome not yet
+    /// delivered, and, with `sent`, the response to the one it was performing. It reloads the
+    /// state and resumes.
     fn restart(&mut self, sent: bool) {
         if sent && let Some((_, request)) = self.queue.front() {
             let request = request.clone();
             let _ = self.remote.perform(&request);
         }
         self.queue.clear();
+        self.held.clear();
         let json = serde_json::to_string(&self.state).unwrap();
         self.state = serde_json::from_str(&json).unwrap();
         self.feed(Input::Resume);
@@ -425,6 +478,15 @@ enum Op {
     Tick,
 }
 
+/// The next value of the `SplitMix64` generator, which advances `state`.
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 fn op() -> impl Strategy<Value = Op> {
     prop_oneof![
         3 => (0..6u8).prop_map(Op::RemotePut),
@@ -451,8 +513,8 @@ struct Run {
     state: String,
 }
 
-fn run<R: Remote>(seed: u64, ops: &[Op]) -> Run {
-    let mut harness = Harness::<R>::new(plan(seed));
+fn run<R: Remote>(seed: u64, order: Order, ops: &[Op]) -> Run {
+    let mut harness = Harness::<R>::ordered(plan(seed), order);
     for op in ops {
         harness.apply(op);
     }
@@ -466,10 +528,10 @@ fn run<R: Remote>(seed: u64, ops: &[Op]) -> Run {
     }
 }
 
-fn converges<R: Remote>(seed: u64, ops: &[Op]) -> Result<(), TestCaseError> {
-    let first = run::<R>(seed, ops);
+fn converges<R: Remote>(seed: u64, order: Order, ops: &[Op]) -> Result<(), TestCaseError> {
+    let first = run::<R>(seed, order, ops);
     prop_assert_eq!(&first.mirror, &first.server);
-    let second = run::<R>(seed, ops);
+    let second = run::<R>(seed, order, ops);
     prop_assert_eq!(&first.state, &second.state);
     prop_assert_eq!(&first.faults, &second.faults);
     Ok(())
@@ -480,17 +542,44 @@ proptest! {
 
     #[test]
     fn google_converges(seed: u64, ops in prop::collection::vec(op(), 0..80)) {
-        converges::<Google>(seed, &ops)?;
+        converges::<Google>(seed, Order::Emitted, &ops)?;
+    }
+
+    #[test]
+    fn google_converges_out_of_order(
+        seed: u64,
+        order: u64,
+        ops in prop::collection::vec(op(), 0..80),
+    ) {
+        converges::<Google>(seed, Order::Shuffled(order), &ops)?;
     }
 
     #[test]
     fn graph_converges(seed: u64, ops in prop::collection::vec(op(), 0..80)) {
-        converges::<Graph>(seed, &ops)?;
+        converges::<Graph>(seed, Order::Emitted, &ops)?;
+    }
+
+    #[test]
+    fn graph_converges_out_of_order(
+        seed: u64,
+        order: u64,
+        ops in prop::collection::vec(op(), 0..80),
+    ) {
+        converges::<Graph>(seed, Order::Shuffled(order), &ops)?;
     }
 
     #[test]
     fn caldav_converges(seed: u64, ops in prop::collection::vec(op(), 0..80)) {
-        converges::<CalDav>(seed, &ops)?;
+        converges::<CalDav>(seed, Order::Emitted, &ops)?;
+    }
+
+    #[test]
+    fn caldav_converges_out_of_order(
+        seed: u64,
+        order: u64,
+        ops in prop::collection::vec(op(), 0..80),
+    ) {
+        converges::<CalDav>(seed, Order::Shuffled(order), &ops)?;
     }
 }
 
@@ -523,9 +612,9 @@ fn long_scenario() -> Vec<Op> {
 fn every_fault_is_injected_and_survived() {
     let ops = long_scenario();
     for (name, run) in [
-        ("google", run::<Google>(7, &ops)),
-        ("graph", run::<Graph>(7, &ops)),
-        ("caldav", run::<CalDav>(7, &ops)),
+        ("google", run::<Google>(7, Order::Emitted, &ops)),
+        ("graph", run::<Graph>(7, Order::Emitted, &ops)),
+        ("caldav", run::<CalDav>(7, Order::Emitted, &ops)),
     ] {
         assert_eq!(run.mirror, run.server, "{name} did not converge");
         assert!(!run.mirror.is_empty(), "{name} ended empty");
@@ -769,6 +858,113 @@ fn a_change_listed_without_its_body_is_read_before_the_pass_completes() {
     assert_eq!(title.as_deref(), Some("renamed"));
 }
 
+fn unread(resource: &str, revision: &str) -> calendar_sync_engine::Change {
+    calendar_sync_engine::Change::Upsert {
+        resource: ResourceId::new(resource),
+        revision: calendar_sync_model::ProviderRevision::new(revision),
+        event: None,
+    }
+}
+
+fn revision(state: &SyncState, resource: &str) -> String {
+    let record = &state.records()[&ResourceId::new(resource)];
+    record.revision.as_ref().unwrap().as_str().to_owned()
+}
+
+#[test]
+fn a_read_from_a_pass_restarted_by_an_expired_cursor_is_not_taken_as_the_new_listing_s() {
+    let mut state = synced();
+    let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+    // The first page lists `b` without its body, so it is read, and the listing goes on.
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(vec![unread("b", "2")], Next::More(cursor("p1"))),
+    });
+    let sent = requests(&effects);
+    let (list, _) = sent[0].clone();
+    let (old_read, _) = sent[1].clone();
+    // The cursor expired: a full pass starts over, and lists `b` at a newer revision.
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: Outcome::Failed(calendar_sync_engine::Failure::CursorExpired),
+    });
+    let (list, _) = requests(&effects)[0].clone();
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(
+            vec![upsert(&event("a", "1", "a")), unread("b", "3")],
+            Next::Done(cursor("c2")),
+        ),
+    });
+    // `b` is read again rather than waiting on the expired pass's read.
+    let (new_read, request) = requests(&effects)[0].clone();
+    assert_eq!(
+        request,
+        Request::Read {
+            resource: ResourceId::new("b")
+        }
+    );
+    // The expired pass's read arrives after the new listing, with the older revision.
+    let effects = state.apply(Input::Outcome {
+        request: old_read,
+        outcome: Outcome::Read(Some(event("b", "2", "b"))),
+    });
+    assert!(effects.is_empty());
+    assert!(state.is_syncing());
+    let effects = state.apply(Input::Outcome {
+        request: new_read,
+        outcome: Outcome::Read(Some(event("b", "3", "b"))),
+    });
+    assert_eq!(effects, [Effect::Notify(Notice::Synced)]);
+    assert_eq!(revision(&state, "b"), "3");
+}
+
+#[test]
+fn an_edit_s_read_older_than_a_committed_pass_does_not_replace_its_record() {
+    let mut state = synced();
+    let base = fields("a");
+    let mut ours = base.clone();
+    ours.title = Some("mine".to_owned());
+    let effects = state.apply(Input::Edit(Edit {
+        id: EditId::new("e1"),
+        resource: ResourceId::new("a"),
+        operation: Operation::Update { base, ours },
+        role: Role::Owner,
+        expires_at: None,
+    }));
+    let (old_read, _) = requests(&effects)[0].clone();
+    // A pass lists `a` at revision 2 and completes while the edit's read is in flight.
+    let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(
+            vec![upsert(&event("a", "2", "mine"))],
+            Next::Done(cursor("c2")),
+        ),
+    });
+    assert_eq!(effects, [Effect::Notify(Notice::Synced)]);
+    // The read arrives with revision 1. It may predate the pass, so it neither replaces the
+    // record nor plans the edit: the edit reads again.
+    let effects = state.apply(Input::Outcome {
+        request: old_read,
+        outcome: Outcome::Read(Some(event("a", "1", "a"))),
+    });
+    assert_eq!(revision(&state, "a"), "2");
+    let (read, request) = requests(&effects)[0].clone();
+    assert!(matches!(request, Request::Read { .. }));
+    assert_eq!(state.pending_edits().count(), 1);
+    // The fresh read finds the edit already in place, so it applies without a write.
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "2", "mine"))),
+    });
+    assert!(
+        matches!(&effects[..], [Effect::Notify(Notice::Applied { edit, .. })] if edit.as_str() == "e1")
+    );
+    assert_eq!(revision(&state, "a"), "2");
+    assert!(state.is_quiet());
+}
+
 #[test]
 fn an_edit_survives_a_full_resync() {
     let mut state = synced();
@@ -798,6 +994,13 @@ fn an_edit_survives_a_full_resync() {
         ),
     });
     assert_eq!(state.pending_edits().count(), 1);
+    // The read was asked for before the listing arrived, so it may be older: it is asked again.
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "1", "a"))),
+    });
+    let (read, request) = requests(&effects)[0].clone();
+    assert!(matches!(request, Request::Read { .. }));
     // The read plans the write from the provider's record.
     let effects = state.apply(Input::Outcome {
         request: read,

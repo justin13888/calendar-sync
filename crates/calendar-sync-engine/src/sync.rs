@@ -43,6 +43,14 @@
 //! the pass reads that resource again before it applies: a resource deleted just before a full
 //! listing's snapshot is not kept alive by an edit's earlier write.
 //!
+//! # Ordering
+//!
+//! Several requests may be in flight at once, and their outcomes may arrive in any order. An
+//! outcome is trusted only when its request was made after everything since learned about its
+//! resource, a full listing's last page counting for every resource. Otherwise it may be older
+//! than what the engine already holds: a read for an edit is made again before the edit plans
+//! from it, and anything else is read again before it is recorded.
+//!
 //! # Resuming
 //!
 //! [`SyncState`] serializes with `serde`, after any step. A request whose outcome was never fed
@@ -228,6 +236,17 @@ pub struct SyncState {
     in_flight: BTreeMap<RequestId, Purpose>,
     #[serde(default)]
     next_request: u64,
+    /// For each resource something was learned about while a request was in flight, the number
+    /// of the first request made after it was learned. An outcome of an earlier request may have
+    /// been performed before or after what was learned, so it is read again rather than trusted.
+    /// Entries no request in flight predates are dropped.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    learned: BTreeMap<ResourceId, u64>,
+    /// The number of the first request made after the last page of a full listing arrived,
+    /// while an earlier request is in flight. A full listing tells about every resource, those
+    /// it leaves out too, so it is learned for all of them.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    learned_all: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     now: Option<Timestamp>,
 }
@@ -287,6 +306,8 @@ enum Purpose {
     PassRead(ResourceId),
     EditRead(ResourceId),
     EditWrite(ResourceId),
+    /// A read outside any pass, of a resource an outcome left in doubt.
+    Refresh(ResourceId),
 }
 
 /// Takes one input, and returns the next state and the effects to perform, in order.
@@ -317,15 +338,18 @@ impl SyncState {
             Input::Outcome { request, outcome } => {
                 if let Some(purpose) = self.in_flight.remove(&request) {
                     match purpose {
-                        Purpose::List => self.on_list(outcome, &mut out),
+                        Purpose::List => self.on_list(request, outcome, &mut out),
                         Purpose::PassRead(resource) => {
-                            self.on_pass_read(&resource, outcome, &mut out);
+                            self.on_pass_read(request, &resource, outcome, &mut out);
                         }
                         Purpose::EditRead(resource) => {
-                            self.on_edit_read(resource, outcome, &mut out);
+                            self.on_edit_read(request, resource, outcome, &mut out);
                         }
                         Purpose::EditWrite(resource) => {
-                            self.on_edit_write(&resource, outcome, &mut out);
+                            self.on_edit_write(request, &resource, outcome, &mut out);
+                        }
+                        Purpose::Refresh(resource) => {
+                            self.on_refresh(request, &resource, outcome, &mut out);
                         }
                     }
                     self.try_commit(&mut out);
@@ -334,6 +358,7 @@ impl SyncState {
             Input::Tick { now } => self.tick(now, &mut out),
             Input::Resume => self.resume(&mut out),
         }
+        self.forget_settled();
         out
     }
 
@@ -378,6 +403,89 @@ impl SyncState {
         out.push(Effect::Request { id, request });
     }
 
+    // Ordering. Outcomes may arrive in any order, and a request may be performed at any time
+    // between being made and its outcome arriving. An outcome is therefore newer than what was
+    // learned about its resource only if its request was made after that was learned.
+
+    /// Notes that something was learned about `resource` now.
+    fn learn(&mut self, resource: &ResourceId) {
+        self.learned.insert(resource.clone(), self.next_request);
+    }
+
+    /// Whether an outcome of `request` about `resource` may be older than what was learned about
+    /// it since the request was made.
+    fn doubtful(&self, request: RequestId, resource: &ResourceId) -> bool {
+        request.get() < self.learned_all
+            || self
+                .learned
+                .get(resource)
+                .is_some_and(|&since| request.get() < since)
+    }
+
+    /// Reads `resource` again, because an outcome about it could not be ordered against what was
+    /// already learned. A pass in progress reads it before it applies. Otherwise a read of its
+    /// own does, unless one is in flight.
+    fn doubt(&mut self, resource: &ResourceId, out: &mut Vec<Effect>) {
+        if let Some(pass) = &mut self.pass {
+            if pass.done.is_some() {
+                pass.staged.insert(resource.clone(), Staged::Unread);
+            } else {
+                pass.observed.insert(resource.clone());
+            }
+            self.read_unread(out);
+        } else if !self
+            .in_flight
+            .values()
+            .any(|purpose| *purpose == Purpose::Refresh(resource.clone()))
+        {
+            let request = Request::Read {
+                resource: resource.clone(),
+            };
+            self.request(Purpose::Refresh(resource.clone()), request, out);
+        }
+    }
+
+    fn on_refresh(
+        &mut self,
+        request: RequestId,
+        resource: &ResourceId,
+        outcome: Outcome,
+        out: &mut Vec<Effect>,
+    ) {
+        let event = match outcome {
+            Outcome::Read(event) => event,
+            Outcome::Failed(Failure::NotFound) => None,
+            Outcome::Failed(Failure::Transient) => {
+                self.doubt(resource, out);
+                return;
+            }
+            // The next pass lists it.
+            _ => return,
+        };
+        if self.doubtful(request, resource) {
+            self.doubt(resource, out);
+        } else {
+            self.observe(resource, event);
+        }
+    }
+
+    /// Drops what was learned before every request in flight was made: no outcome can be
+    /// doubted against it.
+    fn forget_settled(&mut self) {
+        match self.in_flight.keys().next().copied() {
+            None => {
+                self.learned.clear();
+                self.learned_all = 0;
+            }
+            Some(oldest) => {
+                self.learned.retain(|_, since| oldest.get() < *since);
+                if self.learned_all <= oldest.get() {
+                    self.learned_all = 0;
+                }
+            }
+        }
+    }
+
     // Reading.
 
     fn start_pass(&mut self, out: &mut Vec<Effect>) {
@@ -393,14 +501,32 @@ impl SyncState {
         self.request(Purpose::List, Request::List { from }, out);
     }
 
-    fn on_list(&mut self, outcome: Outcome, out: &mut Vec<Effect>) {
-        let Some(pass) = self.pass.as_mut() else {
+    fn on_list(&mut self, request: RequestId, outcome: Outcome, out: &mut Vec<Effect>) {
+        if self.pass.is_none() {
             return;
-        };
+        }
         match outcome {
             Outcome::Listed(page) => {
                 for change in page.changes {
+                    let resource = match &change {
+                        Change::Upsert { resource, .. } | Change::Remove { resource } => {
+                            resource.clone()
+                        }
+                    };
+                    let doubtful = self.doubtful(request, &resource);
+                    self.learn(&resource);
+                    let Some(pass) = self.pass.as_mut() else {
+                        return;
+                    };
                     match change {
+                        // What was learned since this page was asked for may be older or newer
+                        // than it: read it.
+                        _ if doubtful => {
+                            if matches!(change, Change::Upsert { .. }) {
+                                pass.seen.insert(resource.clone());
+                            }
+                            pass.staged.insert(resource, Staged::Unread);
+                        }
                         Change::Upsert {
                             resource,
                             revision,
@@ -425,29 +551,49 @@ impl SyncState {
                         }
                     }
                 }
+                let Some(pass) = self.pass.as_mut() else {
+                    return;
+                };
                 match page.next {
                     Next::More(cursor) => {
                         let from = ListFrom::Continue(cursor);
                         pass.from = from.clone();
                         self.request(Purpose::List, Request::List { from }, out);
                     }
-                    Next::Done(cursor) => pass.done = Some(cursor),
+                    Next::Done(cursor) => {
+                        pass.done = Some(cursor);
+                        if pass.full {
+                            self.learned_all = self.next_request;
+                        }
+                    }
                 }
                 self.read_unread(out);
             }
             Outcome::Failed(Failure::CursorExpired) => {
+                // The reads the expired pass asked for are not this pass's: their outcomes must
+                // not stand in for reads after the new listing.
+                self.in_flight
+                    .retain(|_, purpose| !matches!(purpose, Purpose::PassRead(_)));
                 self.cursor = None;
                 self.start_pass(out);
             }
             Outcome::Failed(Failure::Transient) => {
-                let from = pass.from.clone();
-                self.request(Purpose::List, Request::List { from }, out);
+                if let Some(pass) = &self.pass {
+                    let from = pass.from.clone();
+                    self.request(Purpose::List, Request::List { from }, out);
+                }
             }
             other => self.abandon_pass(&other, out),
         }
     }
 
-    fn on_pass_read(&mut self, resource: &ResourceId, outcome: Outcome, out: &mut Vec<Effect>) {
+    fn on_pass_read(
+        &mut self,
+        request: RequestId,
+        resource: &ResourceId,
+        outcome: Outcome,
+        out: &mut Vec<Effect>,
+    ) {
         let event = match outcome {
             Outcome::Read(event) => event,
             Outcome::Failed(Failure::NotFound) => None,
@@ -462,6 +608,10 @@ impl SyncState {
                 return;
             }
         };
+        if self.doubtful(request, resource) {
+            self.doubt(resource, out);
+            return;
+        }
         // A read this pass asked for, after its listing reported the resource, is the newest word
         // on it. A read an earlier, abandoned pass asked for is like an edit's: it may predate
         // this pass's snapshot.
@@ -552,9 +702,11 @@ impl SyncState {
     /// Records what a read or a write established about one resource: it is `event`, or it does
     /// not exist. A pass in progress takes it over what it listed.
     fn observe(&mut self, resource: &ResourceId, event: Option<ProviderEvent>) {
+        self.learn(resource);
         match event {
             Some(event) => {
                 let id = ResourceId::of(&event);
+                self.learn(&id);
                 if let Some(pass) = &mut self.pass {
                     pass.staged.remove(resource);
                     pass.staged.remove(&id);
@@ -645,7 +797,13 @@ impl SyncState {
         self.request(Purpose::EditRead(resource.clone()), request, out);
     }
 
-    fn on_edit_read(&mut self, resource: ResourceId, outcome: Outcome, out: &mut Vec<Effect>) {
+    fn on_edit_read(
+        &mut self,
+        request: RequestId,
+        resource: ResourceId,
+        outcome: Outcome,
+        out: &mut Vec<Effect>,
+    ) {
         let theirs = match outcome {
             Outcome::Read(theirs) => theirs,
             Outcome::Failed(Failure::NotFound) => None,
@@ -662,6 +820,16 @@ impl SyncState {
                 return;
             }
         };
+        if self.doubtful(request, &resource) {
+            // The read may be older than what was learned since it was asked for, such as a
+            // pass that applied a newer revision. Neither record it nor plan from it.
+            if self.head(&resource).is_some() {
+                self.read_for_edit(&resource, out);
+            } else {
+                self.doubt(&resource, out);
+            }
+            return;
+        }
         self.observe(&resource, theirs.clone());
         let Some(head) = self.head(&resource) else {
             return;
@@ -712,21 +880,27 @@ impl SyncState {
         }
     }
 
-    fn on_edit_write(&mut self, resource: &ResourceId, outcome: Outcome, out: &mut Vec<Effect>) {
+    fn on_edit_write(
+        &mut self,
+        request: RequestId,
+        resource: &ResourceId,
+        outcome: Outcome,
+        out: &mut Vec<Effect>,
+    ) {
         let is_delete = self
             .head(resource)
             .is_some_and(|head| head.edit.operation == Operation::Delete);
         match outcome {
             Outcome::Written(event) => {
-                self.observe(resource, Some(event));
+                self.observe_write(request, resource, Some(event), out);
                 self.finish(resource, None, out);
             }
             Outcome::Deleted => {
-                self.observe(resource, None);
+                self.observe_write(request, resource, None, out);
                 self.finish(resource, None, out);
             }
             Outcome::Failed(Failure::NotFound) if is_delete => {
-                self.observe(resource, None);
+                self.observe_write(request, resource, None, out);
                 self.finish(resource, None, out);
             }
             Outcome::Failed(Failure::Rejected(reason)) => {
@@ -747,6 +921,22 @@ impl SyncState {
                     self.read_for_edit(resource, out);
                 }
             }
+        }
+    }
+
+    /// Records what a write established, unless what was learned since it was asked for may be
+    /// newer: then the resource is read again. The write landed either way.
+    fn observe_write(
+        &mut self,
+        request: RequestId,
+        resource: &ResourceId,
+        event: Option<ProviderEvent>,
+        out: &mut Vec<Effect>,
+    ) {
+        if self.doubtful(request, resource) {
+            self.doubt(resource, out);
+        } else {
+            self.observe(resource, event);
         }
     }
 
@@ -822,7 +1012,18 @@ impl SyncState {
     }
 
     fn resume(&mut self, out: &mut Vec<Effect>) {
+        let refreshes: Vec<ResourceId> = self
+            .in_flight
+            .values()
+            .filter_map(|purpose| match purpose {
+                Purpose::Refresh(resource) => Some(resource.clone()),
+                _ => None,
+            })
+            .collect();
         self.in_flight.clear();
+        for resource in refreshes {
+            self.doubt(&resource, out);
+        }
         if let Some(pass) = &self.pass {
             if pass.done.is_none() {
                 let from = pass.from.clone();
@@ -839,6 +1040,14 @@ impl SyncState {
             self.start_edit(&resource, out);
         }
     }
+}
+
+#[allow(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde passes fields by reference; the lint fires on x86_64 but not on wasm32"
+)]
+const fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 /// A short description of an outcome the engine could not use, for a notice.
