@@ -89,6 +89,14 @@ run = [
 description = "Check published crates for semver violations"
 run = "cargo semver-checks --workspace --all-features"
 
+[tasks."references:verify"]
+description = "Check references/ offline: checksums match, every file is listed, README and SHA256SUMS agree"
+run = "cargo xtask references verify"
+
+[tasks."references:upstream"]
+description = "Download every vendored reference again and compare it with its checksum"
+run = "cargo xtask references upstream"
+
 [tasks."commits:check"]
 description = "Check every commit on the branch follows the commit convention"
 run = "cog check"
@@ -106,5 +114,6 @@ run = [
   "mise run deny",
   "mise run msrv",
   "mise run semver",
+  "mise run references:verify",
   "mise run commits:check",
 ]

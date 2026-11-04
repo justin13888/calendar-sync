@@ -1,0 +1,38 @@
+name: Scheduled
+
+on:
+  schedule:
+    # Mondays at 06:17 UTC.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  MISE_AUTO_INSTALL: "false"
+  MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+jobs:
+  references-upstream:
+    name: references upstream
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      # Downloads every vendored reference again. A pinned source that changed fails the run; a
+      # snapshot (the Google discovery document, the RFC 5545 errata page) that drifted is reported.
+      - run: mise run references:upstream

@@ -24,8 +24,9 @@ mise run ci         # every gate CI runs, in order
 | `crates/calendar-sync-ical` | iCalendar mapping. **Pure** |
 | `crates/calendar-sync-google`, `-graph`, `-caldav` | Provider mapping and thin clients; I/O is injected |
 | `crates/calendar-sync-testkit` | Fake providers and recorded fixtures |
-| `xtask/` | Repository automation (`cargo xtask toolchain`, `purity`, `fixture purity`, `fixture deny`). Never published |
+| `xtask/` | Repository automation (`cargo xtask toolchain`, `purity`, `fixture purity`, `fixture deny`, `references verify`, `references upstream`). Never published |
 | `tests/fixtures/purity`, `tests/fixtures/deny` | Excluded crates that **must fail** clippy and cargo-deny. Do not fix them |
+| `references/` | Vendored specs, the ground truth. A fixed, pinned list; `references/README.md` documents each file. Do not add, drop or edit a file without an issue |
 
 ## Rules
 
@@ -60,6 +61,9 @@ mise run ci         # every gate CI runs, in order
 | `mise run deny` | cargo-deny and the deny fixture |
 | `mise run msrv` | `cargo hack check --rust-version` on Rust 1.91 |
 | `mise run semver` | cargo-semver-checks on published crates |
+| `mise run references:verify` | offline: `references/` matches `SHA256SUMS`, every file is listed, README and `SHA256SUMS` agree |
 | `mise run commits:check` | every commit on the branch follows `cog.toml` |
 
-The hooks: pre-commit runs the `lint` linters in fix mode, commit-msg runs `cog verify`, and pre-push runs `test`, `deny` and `purity`.
+The hooks: pre-commit runs the `lint` linters in fix mode, commit-msg runs `cog verify`, and pre-push runs `test`, `deny`, `purity` and `references:verify`.
+
+The weekly `scheduled.yml` workflow runs `mise run references:upstream`, which downloads every vendored reference again: a pinned source that changed fails, a snapshot that drifted is reported.
