@@ -17,9 +17,14 @@ publish = false
 
 [dependencies]
 calendar-sync-model.workspace = true
+jiff = { workspace = true, features = ["serde"] }
+serde.workspace = true
 
 [dev-dependencies]
-jiff.workspace = true
+# The testkit depends on this crate for its seams. Integration tests link one copy of each.
+calendar-sync-testkit.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

@@ -91,7 +91,11 @@ name = "calendar-sync-engine"
 version = "0.1.0"
 dependencies = [
  "calendar-sync-model",
+ "calendar-sync-testkit",
  "jiff",
+ "proptest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -124,6 +128,7 @@ version = "0.1.0"
 name = "calendar-sync-testkit"
 version = "0.1.0"
 dependencies = [
+ "calendar-sync-engine",
  "calendar-sync-model",
  "proptest",
  "serde",

@@ -1,0 +1,11 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 46c737c17a7d1b074d2f4ad8a27f4fdea561b40205792ddcaf406312d3ceb4a2 # shrinks to seed = 4213416194039208863, ops = [LocalCreate(4), LocalCreate(0), Sync, Run(6), LocalUpdate(4), LocalCreate(1), ExpireTokens, Sync, Run(4), RemoteDelete(4)]
+cc f0f82b4d51ee852b3720321ab348bdf2fbce8903744cf07a07881821bcd3ff6d # shrinks to seed = 11214505633445556818, ops = [RemotePut(3), RemotePut(2), LocalCreate(2), Run(1), Restart { sent: true }, Run(2), RemotePut(2), RemotePut(4), RemotePut(1), LocalCreate(0), Run(1), RemotePut(0), Sync, Run(7), RemoteDelete(1)]
+cc 84e0d0557ce44a7c02b52f2c81d4c02a96b8b8fc4692b289c2538c50cb9a4061 # shrinks to seed = 13931049125405206317, order = 14459375154083642959, ops = [RemotePut(1), RemotePut(2), RemotePut(0), Sync, RemotePut(0), RemotePut(5), Run(4), LocalUpdate(2), Sync, Run(1), Run(6), LocalUpdate(5), Restart { sent: false }, Run(4), LocalDelete(2), Run(2), Run(4), Restart { sent: false }, RemotePut(1), RemotePut(3), Run(4), LocalDelete(5), RemoteDelete(0), Sync, LocalDelete(0), Run(1), LocalUpdate(1), Run(7), Run(4), Run(2), LocalUpdate(5), Run(5), RemotePut(1), Run(3), Sync]
+cc 398cda17928a4bba4088231991654206bd97ede0b772e4270d34ca7ceb939e85 # shrinks to seed = 2256088445680127204, order = 18277037515422474866, ops = [LocalCreate(2), LocalCreate(4), LocalCreate(5), Run(4), RemoteDelete(0), RemoteDelete(4), LocalCreate(0), Sync, LocalUpdate(0), LocalUpdate(0)]
+cc 15654531fceb5b90f8ee9919b071d9bd141960b466a19aafb4e4f34c0608a59a # shrinks to seed = 15851855099310867587, order = 11406135827162944334, ops = [Sync, Run(2), LocalCreate(4), LocalCreate(0), RemotePut(1), Sync, Run(5), Run(3), LocalUpdate(4), LocalCreate(2), Restart { sent: false }, Run(7), Run(1), Run(6), Sync]
