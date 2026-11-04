@@ -80,7 +80,7 @@ pub struct ReadEvent {
     pub losses: Vec<Loss>,
 }
 
-/// What [`write`] produced.
+/// What [`write()`] produced.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WrittenEvent {
     /// The `Event` JSON object, without `id` or `etag`.

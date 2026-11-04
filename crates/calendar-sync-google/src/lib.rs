@@ -57,7 +57,7 @@
 //! event whose status is cancelled.
 //!
 //! What Google cannot hold (a floating time, a chair, a reminder after the start) is written as
-//! the nearest value and reported as a [`Loss`](calendar_sync_model::Loss) by [`event::write`].
+//! the nearest value and reported as a [`Loss`](calendar_sync_model::Loss) by [`event::write()`].
 //!
 //! # Ground truth
 //!
