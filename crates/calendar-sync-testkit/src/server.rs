@@ -28,6 +28,9 @@ pub(crate) struct Cursor {
     epoch: u64,
     /// A full pass omits deleted resources.
     full: bool,
+    /// The sequence number when the full pass this token descends from started. That pass
+    /// omitted the tombstones at or below it, so a replay never delivers them.
+    base: u64,
     /// Changes after this sequence number are reported.
     since: u64,
     /// The sequence number when the pass started, once it has.
@@ -43,7 +46,10 @@ impl Cursor {
             .map_or_else(|| "-".to_owned(), |upto| upto.to_string());
         let after = self.after.as_deref().map_or_else(|| "-".to_owned(), hex);
         let kind = if self.full { 'f' } else { 'i' };
-        format!("{}.{kind}.{}.{upto}.{after}", self.epoch, self.since)
+        format!(
+            "{}.{kind}.{}.{}.{upto}.{after}",
+            self.epoch, self.base, self.since
+        )
     }
 
     pub(crate) fn decode(token: &str) -> Option<Self> {
@@ -54,6 +60,7 @@ impl Cursor {
             "i" => false,
             _ => return None,
         };
+        let base = parts.next()?.parse().ok()?;
         let since = parts.next()?.parse().ok()?;
         let upto = match parts.next()? {
             "-" => None,
@@ -69,6 +76,7 @@ impl Cursor {
         Some(Self {
             epoch,
             full,
+            base,
             since,
             upto,
             after,
@@ -213,6 +221,7 @@ impl<B: Clone> Server<B> {
             None => Cursor {
                 epoch: self.epoch,
                 full: true,
+                base: 0,
                 since: 0,
                 upto: None,
                 after: None,
@@ -259,9 +268,11 @@ impl<B: Clone> Server<B> {
         let mut replayed = false;
         if fault == Some(Fault::Replay) {
             // Changes delivered before this page: by an earlier pass, or by an earlier page of
-            // this one.
+            // this one. The full pass this token descends from omitted the tombstones at or
+            // below its start, so those were never delivered.
             let delivered = |id: &String, resource: &Resource<B>| {
-                let earlier_pass = resource.seq <= cursor.since;
+                let earlier_pass = resource.seq <= cursor.since
+                    && !(resource.deleted && resource.seq <= cursor.base);
                 let earlier_page = cursor.after.as_ref().is_some_and(|after| id <= after)
                     && resource.seq > cursor.since
                     && resource.seq <= upto;
@@ -292,6 +303,7 @@ impl<B: Clone> Server<B> {
             let next = Cursor {
                 epoch: self.epoch,
                 full: cursor.full,
+                base: cursor.base,
                 since: cursor.since,
                 upto: Some(upto),
                 after: Some(matching[take - 1].clone()),
@@ -301,6 +313,7 @@ impl<B: Clone> Server<B> {
             let sync = Cursor {
                 epoch: self.epoch,
                 full: false,
+                base: if cursor.full { upto } else { cursor.base },
                 since: upto,
                 upto: None,
                 after: None,
@@ -336,6 +349,7 @@ mod tests {
         let cursor = Cursor {
             epoch: 3,
             full: false,
+            base: 4,
             since: 9,
             upto: Some(12),
             after: Some("a.b/c d".to_owned()),
@@ -375,6 +389,30 @@ mod tests {
         let incremental = server.sync(full.sync.as_deref(), None).unwrap();
         assert_eq!(ids(&incremental), ["a"]);
         assert!(incremental.items[0].1.deleted);
+    }
+
+    #[test]
+    fn replay_never_delivers_a_tombstone_the_full_pass_omitted() {
+        let plan = FaultPlan::seeded(1).with_rate(Fault::Replay, 1000);
+        let mut server = Server::new(plan);
+        server.upsert("a", ());
+        server.upsert("b", ());
+        server.remove("b");
+        let full = server.sync(None, None).unwrap();
+        assert_eq!(ids(&full), ["a"]);
+        server.upsert("c", ());
+        server.remove("c");
+        let mut token = full.sync.unwrap();
+        // Every incremental pass replays; "b" was never delivered, "c"'s removal was.
+        let mut replayed = Vec::new();
+        for _ in 0..16 {
+            let page = server.sync(Some(&token), None).unwrap();
+            replayed.extend(ids(&page).into_iter().map(str::to_owned));
+            token = page.sync.unwrap();
+        }
+        assert!(!replayed.iter().any(|id| id == "b"), "{replayed:?}");
+        assert!(replayed.iter().any(|id| id == "a"), "{replayed:?}");
+        assert!(replayed.iter().any(|id| id == "c"), "{replayed:?}");
     }
 
     #[test]
