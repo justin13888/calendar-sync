@@ -44,6 +44,7 @@ const RATE_LIMITED: [&str; 4] = [
 /// | `412` | [`Failure::PreconditionFailed`] |
 /// | `401`, `408`, `429`, `5xx`, a rate-limit `403`, no response, an unreadable `2xx` | [`Failure::Transient`] |
 /// | any other status | [`Failure::Rejected`] with Google's message |
+/// | a page item that does not map or has no `etag`, a last page with no `nextSyncToken` | [`Failure::Rejected`] for the whole page |
 ///
 /// A `401` is transient because the transport owns credentials: it refreshes them and the engine
 /// tries again.
@@ -353,3 +354,6 @@ impl<T: Transport> Client<T> {
         self.transport
     }
 }
+
+#[cfg(test)]
+mod tests;
