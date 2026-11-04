@@ -202,6 +202,26 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - run: mise run msrv
 
+  references:
+    name: references
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      # Offline: checksums match, every file is listed, README and SHA256SUMS agree.
+      - run: mise run references:verify
+
   commits:
     name: commits
     runs-on: ubuntu-latest
@@ -239,7 +259,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [toolchain, lint, clippy, test, doc, wasm, purity, deny, msrv, commits]
+    needs: [toolchain, lint, clippy, test, doc, wasm, purity, deny, msrv, references, commits]
     runs-on: ubuntu-latest
     permissions: {}
     steps:

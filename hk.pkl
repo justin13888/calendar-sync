@@ -50,6 +50,9 @@ hooks {
             ["purity"] {
                 check = "mise run purity"
             }
+            ["references"] {
+                check = "mise run references:verify"
+            }
         }
     }
     ["check"] {
