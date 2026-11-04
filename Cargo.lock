@@ -89,6 +89,10 @@ version = "0.1.0"
 [[package]]
 name = "calendar-sync-engine"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "jiff",
+]
 
 [[package]]
 name = "calendar-sync-google"

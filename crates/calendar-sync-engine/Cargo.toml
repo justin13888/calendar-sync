@@ -15,5 +15,11 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 # Unpublished until this crate's release issue.
 publish = false
 
+[dependencies]
+calendar-sync-model.workspace = true
+
+[dev-dependencies]
+jiff.workspace = true
+
 [lints]
 workspace = true
