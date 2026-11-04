@@ -30,7 +30,7 @@
 //! Each [`Edit`] waits in a queue per resource, and the head of each queue is pushed:
 //!
 //! 1. An update or delete reads the resource first, then plans from that read: an update merges
-//!    its base, its own values and the read record field by field with [`merge`](crate::merge::merge),
+//!    its base, its own values and the read record field by field with [`merge`],
 //!    and writes the result only if it differs, conditional on the read revision. A create is
 //!    written at once, and fails if the resource exists.
 //! 2. A write that loses a race, or whose response is lost, reads again and plans again. Because
@@ -38,7 +38,10 @@
 //! 3. A permanent failure, a deleted target, or an edit past its `expires_at` ends the edit with
 //!    a [`Notice`], and the next edit for the resource starts.
 //!
-//! Every read and write the engine sees updates the record it names, also mid-pass.
+//! Every read and write the engine sees updates the record it names, also mid-pass. One an edit
+//! makes while a listing is still arriving may be older or newer than the listing's snapshot, so
+//! the pass reads that resource again before it applies: a resource deleted just before a full
+//! listing's snapshot is not kept alive by an edit's earlier write.
 //!
 //! # Resuming
 //!
@@ -98,7 +101,7 @@ pub struct Edit {
 /// What an [`Edit`] does.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[expect(
+#[allow(
     clippy::large_enum_variant,
     reason = "an operation is moved once into the queue; boxing would only add an allocation"
 )]
@@ -119,7 +122,7 @@ pub enum Operation {
 /// One input to [`step`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[expect(
+#[allow(
     clippy::large_enum_variant,
     reason = "an input is consumed by the step it is passed to, never stored"
 )]
@@ -146,7 +149,7 @@ pub enum Input {
 
 /// One thing [`step`] asks the application to do.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[expect(
+#[allow(
     clippy::large_enum_variant,
     reason = "an effect is handed to the application once, never stored"
 )]
@@ -239,8 +242,13 @@ struct Pass {
     from: ListFrom,
     /// What the pass has listed, to apply when it completes.
     staged: BTreeMap<ResourceId, Staged>,
-    /// Every resource the pass, or a read or write during it, saw exist.
+    /// Every resource the listing reported, or a read after the listing ended found, to exist.
     seen: BTreeSet<ResourceId>,
+    /// The resources an edit's read or write established while the listing was still arriving.
+    /// The listing's snapshot may predate or follow each of them, so each is read again before
+    /// the pass applies.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    observed: BTreeSet<ResourceId>,
     /// The cursor the last page ended with, once it arrived.
     done: Option<Cursor>,
 }
@@ -264,6 +272,11 @@ struct Pending {
     conflicts: Vec<Conflict>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     refused: Vec<Refused>,
+    /// A create was answered [`Failure::AlreadyExists`]. If the read that follows finds nothing,
+    /// the id is held by a deleted resource (Google keeps a cancelled event's id), and creating
+    /// again would fail forever.
+    #[serde(default, skip_serializing_if = "core::ops::Not::not")]
+    collided: bool,
 }
 
 /// What a request in flight is for.
@@ -374,6 +387,7 @@ impl SyncState {
             from: from.clone(),
             staged: BTreeMap::new(),
             seen: BTreeSet::new(),
+            observed: BTreeSet::new(),
             done: None,
         });
         self.request(Purpose::List, Request::List { from }, out);
@@ -434,15 +448,30 @@ impl SyncState {
     }
 
     fn on_pass_read(&mut self, resource: &ResourceId, outcome: Outcome, out: &mut Vec<Effect>) {
-        match outcome {
-            Outcome::Read(event) => self.observe(resource, event),
-            Outcome::Failed(Failure::NotFound) => self.observe(resource, None),
-            Outcome::Failed(Failure::Transient) => self.read_unread(out),
+        let event = match outcome {
+            Outcome::Read(event) => event,
+            Outcome::Failed(Failure::NotFound) => None,
+            Outcome::Failed(Failure::Transient) => {
+                self.read_unread(out);
+                return;
+            }
             other => {
                 if self.pass.is_some() {
                     self.abandon_pass(&other, out);
                 }
+                return;
             }
+        };
+        // A read this pass asked for, after its listing reported the resource, is the newest word
+        // on it. A read an earlier, abandoned pass asked for is like an edit's: it may predate
+        // this pass's snapshot.
+        let listed = self
+            .pass
+            .as_ref()
+            .is_some_and(|pass| pass.staged.get(resource) == Some(&Staged::Unread));
+        self.observe(resource, event);
+        if listed && let Some(pass) = &mut self.pass {
+            pass.observed.remove(resource);
         }
     }
 
@@ -489,6 +518,17 @@ impl SyncState {
         if !ready {
             return;
         }
+        if let Some(pass) = &mut self.pass
+            && !pass.observed.is_empty()
+        {
+            // What an edit saw while the listing arrived may be older or newer than the listing.
+            // A read now is newer than both.
+            for resource in core::mem::take(&mut pass.observed) {
+                pass.staged.insert(resource, Staged::Unread);
+            }
+            self.read_unread(out);
+            return;
+        }
         let Some(pass) = self.pass.take() else {
             return;
         };
@@ -518,7 +558,11 @@ impl SyncState {
                 if let Some(pass) = &mut self.pass {
                     pass.staged.remove(resource);
                     pass.staged.remove(&id);
-                    pass.seen.insert(id.clone());
+                    if pass.done.is_some() {
+                        pass.seen.insert(id.clone());
+                    } else {
+                        pass.observed.insert(id.clone());
+                    }
                 }
                 self.put_record(id, event);
             }
@@ -526,6 +570,9 @@ impl SyncState {
                 if let Some(pass) = &mut self.pass {
                     pass.staged.remove(resource);
                     pass.seen.remove(resource);
+                    if pass.done.is_none() {
+                        pass.observed.insert(resource.clone());
+                    }
                 }
                 self.records.remove(resource);
             }
@@ -557,6 +604,7 @@ impl SyncState {
             edit,
             conflicts: Vec::new(),
             refused: Vec::new(),
+            collided: false,
         });
         if queue.len() == 1 {
             self.start_edit(&resource, out);
@@ -619,10 +667,14 @@ impl SyncState {
             return;
         };
         let (operation, role) = (head.edit.operation.clone(), head.edit.role.clone());
+        let collided = head.collided;
         match (&operation, theirs) {
             (Operation::Create(ours), Some(theirs)) => {
                 let rejection = (theirs.fields != ours.fields).then_some(Rejection::Exists);
                 self.finish(&resource, rejection, out);
+            }
+            (Operation::Create(_), None) if collided => {
+                self.finish(&resource, Some(Rejection::Exists), out);
             }
             (Operation::Create(ours), None) => {
                 let request = Request::Create {
@@ -679,6 +731,14 @@ impl SyncState {
             }
             Outcome::Failed(Failure::Rejected(reason)) => {
                 self.finish(resource, Some(Rejection::Provider(reason)), out);
+            }
+            Outcome::Failed(Failure::AlreadyExists) => {
+                if let Some(head) = self.edits.get_mut(resource).and_then(VecDeque::front_mut) {
+                    head.collided = true;
+                }
+                if self.head(resource).is_some() {
+                    self.read_for_edit(resource, out);
+                }
             }
             // A lost race, a lost response, or a create or update that found the resource in a
             // state it did not expect: plan again from a fresh read.

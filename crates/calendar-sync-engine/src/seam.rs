@@ -189,7 +189,7 @@ pub struct Page {
 /// One change in a [`Page`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[expect(
+#[allow(
     clippy::large_enum_variant,
     reason = "a change is moved once into the state; boxing would allocate per change for nothing"
 )]
