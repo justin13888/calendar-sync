@@ -16,6 +16,7 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 publish = false
 
 [dependencies]
+calendar-sync-engine.workspace = true
 calendar-sync-model.workspace = true
 serde.workspace = true
 serde_json.workspace = true

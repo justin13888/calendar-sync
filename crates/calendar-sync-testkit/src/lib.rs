@@ -36,6 +36,12 @@
 //! (JSON for Google and Graph, iCalendar text for `CalDAV`), and Graph's delta window is not
 //! modelled.
 //!
+//! # Driving the sync engine
+//!
+//! The [`seam`] module implements the engine's
+//! [`ProviderSeam`](calendar_sync_engine::ProviderSeam) for each fake, so the engine's requests
+//! can be performed against them.
+//!
 //! # Recorded fixtures
 //!
 //! [`fixture::Fixture`] is the format for HTTP exchanges recorded from live probes. A fixture
@@ -48,6 +54,7 @@ pub mod fixture;
 pub mod google;
 pub mod graph;
 mod rng;
+pub mod seam;
 mod server;
 
 pub use fault::{CallKind, Fault, FaultPlan, InjectedFault};
