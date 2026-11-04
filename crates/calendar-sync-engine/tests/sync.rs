@@ -1037,6 +1037,103 @@ fn a_read_in_flight_when_a_write_is_doubted_does_not_overwrite_it() {
 }
 
 #[test]
+fn a_refresh_in_flight_when_a_write_is_doubted_outside_a_pass_does_not_overwrite_it() {
+    let mut state = synced();
+    let update = |id: &str, from: &str, to: &str| {
+        let base = fields(from);
+        let mut ours = base.clone();
+        ours.title = Some(to.to_owned());
+        Input::Edit(Edit {
+            id: EditId::new(id),
+            resource: ResourceId::new("a"),
+            operation: Operation::Update { base, ours },
+            role: Role::Owner,
+            expires_at: None,
+        })
+    };
+    let read_a = Request::Read {
+        resource: ResourceId::new("a"),
+    };
+    // Two edits queue on `a`. The first reads `a@1` and writes.
+    let (read, _) = requests(&state.apply(update("e0", "a", "mine0")))[0].clone();
+    assert!(requests(&state.apply(update("e1", "mine0", "mine1"))).is_empty());
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "1", "a"))),
+    });
+    let (w0, _) = requests(&effects)[0].clone();
+    // A pass lists `a` after the write was asked for, and commits.
+    let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(
+            vec![upsert(&event("a", "2", "mine0"))],
+            Next::Done(cursor("c2")),
+        ),
+    });
+    assert_eq!(effects, [Effect::Notify(Notice::Synced)]);
+    // The first write lands and is doubted outside a pass: a refresh is asked for, and the second
+    // edit reads `a@2` and writes.
+    let effects = state.apply(Input::Outcome {
+        request: w0,
+        outcome: Outcome::Written(event("a", "2", "mine0")),
+    });
+    let sent = requests(&effects);
+    assert_eq!(sent.len(), 2);
+    let (r0, request) = sent[0].clone();
+    assert_eq!(request, read_a);
+    let (read, request) = sent[1].clone();
+    assert_eq!(request, read_a);
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "2", "mine0"))),
+    });
+    let (w1, request) = requests(&effects)[0].clone();
+    assert!(matches!(request, Request::Update { .. }));
+    // A second pass lists `a` after the refresh and the second write were asked for, and commits.
+    let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(
+            vec![upsert(&event("a", "2", "mine0"))],
+            Next::Done(cursor("c3")),
+        ),
+    });
+    assert_eq!(effects, [Effect::Notify(Notice::Synced)]);
+    // The refresh is doubted against that pass, so `a` is refreshed again.
+    let effects = state.apply(Input::Outcome {
+        request: r0,
+        outcome: Outcome::Read(Some(event("a", "2", "mine0"))),
+    });
+    let (r1, request) = requests(&effects)[0].clone();
+    assert_eq!(request, read_a);
+    // The second write lands at revision 3 and is doubted while that refresh is in flight.
+    let effects = state.apply(Input::Outcome {
+        request: w1,
+        outcome: Outcome::Written(event("a", "3", "mine1")),
+    });
+    assert!(
+        matches!(&effects[..], [Effect::Notify(Notice::Applied { edit, .. })] if edit.as_str() == "e1")
+    );
+    // The refresh was performed before the write landed. It is not recorded: `a` is read again.
+    let effects = state.apply(Input::Outcome {
+        request: r1,
+        outcome: Outcome::Read(Some(event("a", "2", "mine0"))),
+    });
+    let (r2, request) = requests(&effects)[0].clone();
+    assert_eq!(request, read_a);
+    assert!(!state.is_quiet());
+    let effects = state.apply(Input::Outcome {
+        request: r2,
+        outcome: Outcome::Read(Some(event("a", "3", "mine1"))),
+    });
+    assert!(effects.is_empty());
+    assert_eq!(revision(&state, "a"), "3");
+    assert_eq!(state.cursor(), Some(&cursor("c3")));
+    assert!(state.is_quiet());
+}
+
+#[test]
 fn an_edit_survives_a_full_resync() {
     let mut state = synced();
     let base = fields("a");
