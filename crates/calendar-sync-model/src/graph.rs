@@ -104,6 +104,12 @@ fn rule_losses(rule: &RecurrenceRule, lose: &mut impl FnMut(&str)) {
         }
         Frequency::Yearly => {
             match rule.by_month.as_slice() {
+                // Without BYMONTH, RFC 5545 expands a BYMONTHDAY to every month and counts a
+                // BYDAY position within the year; Graph's yearly patterns need one month and
+                // count `index` within it.
+                [] if !rule.by_month_day.is_empty() || !rule.by_day.is_empty() => {
+                    lose("BYMONTHDAY or BYDAY on a yearly rule without BYMONTH");
+                }
                 [] => {}
                 [month] if !month.leap => {}
                 [month] if month.leap => lose("a leap month"),
@@ -266,6 +272,19 @@ mod tests {
                     month: 5,
                     leap: true,
                 }],
+                ..rule(Frequency::Yearly)
+            },
+            RecurrenceRule {
+                by_month_day: vec![15],
+                ..rule(Frequency::Yearly)
+            },
+            RecurrenceRule {
+                by_day: vec![NDay::nth(Weekday::Friday, -1)],
+                ..rule(Frequency::Yearly)
+            },
+            RecurrenceRule {
+                by_day: vec![NDay::every(Weekday::Friday)],
+                by_set_position: vec![-1],
                 ..rule(Frequency::Yearly)
             },
             RecurrenceRule {
