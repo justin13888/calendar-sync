@@ -34,12 +34,14 @@
 //! # No credentials, no personal data
 //!
 //! [`Fixture::audit`] reports anything that looks like a credential or personal data:
-//! authentication headers and cookies, credential query parameters and JSON fields, bearer and
-//! basic credentials, Google access tokens, JSON Web Tokens, and email addresses outside the
-//! reserved example domains (RFC 2606 and RFC 6761). [`Fixture::from_json`] refuses a fixture the
-//! audit flags, so a fixture that leaks cannot be loaded. A recorder runs [`Fixture::redact`]
-//! before writing, which removes or replaces every finding and maps each email address to a
-//! stable `personN@example.com`.
+//! authentication headers and cookies, credential parameters (in a query, or as `name=value`
+//! pairs in text such as a form-encoded body) and JSON fields, bearer and basic credentials,
+//! Google access tokens, JSON Web Tokens, and email addresses outside the reserved example domains
+//! (RFC 2606 and RFC 6761). It reads the description, every URL, header and body, with iCalendar
+//! line folds (RFC 5545 section 3.1) removed, so a fold inside a value hides nothing.
+//! [`Fixture::from_json`] refuses a fixture the audit flags, so a fixture that leaks cannot be
+//! loaded. A recorder runs [`Fixture::redact`] before writing, which removes or replaces every
+//! finding and maps each email address to a stable `personN@example.com`.
 //!
 //! The audit is a deny-list. It cannot recognise a person's name or a street address in free
 //! text, so recorded event content is replaced with synthetic text before it is committed.
@@ -69,7 +71,7 @@ const CREDENTIAL_HEADERS: [&str; 8] = [
     "x-csrf-token",
 ];
 
-/// Query parameters that carry credentials, in lowercase.
+/// Query and form parameters that carry credentials, in lowercase.
 const CREDENTIAL_PARAMETERS: [&str; 12] = [
     "access_token",
     "refresh_token",
@@ -178,7 +180,8 @@ impl Body {
 pub enum FindingKind {
     /// A header that carries credentials or a session, such as `Authorization` or `Cookie`.
     CredentialHeader,
-    /// A query parameter that carries a credential, such as `access_token` or `key`.
+    /// A query or form parameter that carries a credential, such as `access_token` or `key`. The
+    /// finding's path ends in `?` and the parameter's name.
     CredentialParameter,
     /// A JSON field that carries a credential, such as `refresh_token`.
     CredentialField,
@@ -202,7 +205,7 @@ impl fmt::Display for Finding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let what = match self.kind {
             FindingKind::CredentialHeader => "credential header",
-            FindingKind::CredentialParameter => "credential query parameter",
+            FindingKind::CredentialParameter => "credential parameter",
             FindingKind::CredentialField => "credential field",
             FindingKind::CredentialValue => "credential value",
             FindingKind::EmailAddress => "email address",
@@ -285,9 +288,10 @@ impl Fixture {
     #[must_use]
     pub fn audit(&self) -> Vec<Finding> {
         let mut findings = Vec::new();
+        let mut push = |path: String, kind| findings.push(Finding { path, kind });
+        audit_text(&self.description, "description", &mut push);
         for (index, exchange) in self.exchanges.iter().enumerate() {
             let request = format!("exchanges[{index}].request");
-            let mut push = |path: String, kind| findings.push(Finding { path, kind });
             audit_url(&exchange.request.url, &format!("{request}.url"), &mut push);
             audit_headers(&exchange.request.headers, &request, &mut push);
             audit_body(
@@ -308,10 +312,13 @@ impl Fixture {
 
     /// Remove or replace everything [`Self::audit`] flags. Credential headers are removed,
     /// credential parameters, fields and values become [`REDACTED`], and each email address
-    /// becomes `personN@example.com`, the same address always the same replacement. A URL's
-    /// `%40` is decoded to `@` first, so an encoded address is found too.
+    /// becomes `personN@example.com`, the same address always the same replacement. An address
+    /// written with `%40` in a URL is found too, and its replacement keeps the `%40`, so a
+    /// client that sends the recorded URL still matches the redacted one. A value split by an
+    /// iCalendar line fold is replaced whole, fold included; every other fold is kept.
     pub fn redact(&mut self) {
         let mut redactor = Redactor::default();
+        self.description = redactor.text(&self.description);
         for exchange in &mut self.exchanges {
             exchange.request.url = redactor.url(&exchange.request.url);
             redactor.headers(&mut exchange.request.headers);
@@ -451,15 +458,7 @@ fn is_credential_field(name: &str) -> bool {
 }
 
 fn audit_url(url: &str, path: &str, push: &mut impl FnMut(String, FindingKind)) {
-    if let Some((_, query)) = url.split_once('?') {
-        for pair in query.split('&') {
-            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-            if is_credential_parameter(name) && !value.is_empty() && value != REDACTED {
-                push(format!("{path}?{name}"), FindingKind::CredentialParameter);
-            }
-        }
-    }
-    audit_text(&url.replace("%40", "@"), path, push);
+    audit_text(&View::decoded(url).text, path, push);
 }
 
 fn audit_headers(
@@ -517,6 +516,11 @@ fn audit_json(value: &Value, path: &str, push: &mut impl FnMut(String, FindingKi
 }
 
 fn audit_text(text: &str, path: &str, push: &mut impl FnMut(String, FindingKind)) {
+    let view = View::unfolded(text);
+    let text = view.text.as_str();
+    for (name, _, _) in parameter_spans(text) {
+        push(format!("{path}?{name}"), FindingKind::CredentialParameter);
+    }
     if !credential_spans(text).is_empty() {
         push(path.to_owned(), FindingKind::CredentialValue);
     }
@@ -582,6 +586,105 @@ fn credential_spans(text: &str) -> Vec<(usize, usize)> {
     spans
 }
 
+/// The values of credential parameters in `text`: `name=value` pairs that start the text or
+/// follow `?`, `&`, `;` or whitespace, as in a query or a form-encoded body. Each is the
+/// parameter's name and the byte range of its value. An empty or already redacted value holds
+/// nothing secret and is skipped.
+fn parameter_spans(text: &str) -> Vec<(&str, usize, usize)> {
+    let mut spans = Vec::new();
+    for (equals, _) in text.match_indices('=') {
+        let start = text[..equals]
+            .char_indices()
+            .rev()
+            .take_while(|(_, c)| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+            .last()
+            .map_or(equals, |(index, _)| index);
+        let bounded = text[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| matches!(c, '?' | '&' | ';') || c.is_whitespace());
+        let name = &text[start..equals];
+        if !bounded || !is_credential_parameter(name) {
+            continue;
+        }
+        let value_start = equals + 1;
+        let value_end = text[value_start..]
+            .find(|c: char| matches!(c, '&' | ';' | '#' | '<' | '"' | '\'') || c.is_whitespace())
+            .map_or(text.len(), |index| value_start + index);
+        let value = &text[value_start..value_end];
+        if !value.is_empty() && value != REDACTED {
+            spans.push((name, value_start, value_end));
+        }
+    }
+    spans
+}
+
+/// Text as the detectors read it, and where each of its bytes came from in the original.
+struct View {
+    text: String,
+    /// For each byte of `text`, the byte range of the original it stands for.
+    origin: Vec<(usize, usize)>,
+}
+
+impl View {
+    /// `text` with its iCalendar line folds (RFC 5545 section 3.1) removed: a line break, `CRLF`
+    /// or a bare `LF`, followed by one space or tab.
+    fn unfolded(text: &str) -> Self {
+        let bytes = text.as_bytes();
+        let mut view = Self::with_capacity(text.len());
+        let (mut kept, mut index) = (0, 0);
+        while index < bytes.len() {
+            let fold = match bytes[index..] {
+                [b'\r', b'\n', b' ' | b'\t', ..] => 3,
+                [b'\n', b' ' | b'\t', ..] => 2,
+                _ => 0,
+            };
+            if fold == 0 {
+                index += 1;
+            } else {
+                view.keep(text, kept, index);
+                index += fold;
+                kept = index;
+            }
+        }
+        view.keep(text, kept, text.len());
+        view
+    }
+
+    /// `url` with each `%40` decoded to `@`, so an encoded email address is found.
+    fn decoded(url: &str) -> Self {
+        let mut view = Self::with_capacity(url.len());
+        let mut kept = 0;
+        for (index, _) in url.match_indices("%40") {
+            view.keep(url, kept, index);
+            view.text.push('@');
+            view.origin.push((index, index + 3));
+            kept = index + 3;
+        }
+        view.keep(url, kept, url.len());
+        view
+    }
+
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            text: String::with_capacity(capacity),
+            origin: Vec::with_capacity(capacity),
+        }
+    }
+
+    /// Copy `original[start..end]` unchanged.
+    fn keep(&mut self, original: &str, start: usize, end: usize) {
+        self.text.push_str(&original[start..end]);
+        self.origin
+            .extend((start..end).map(|index| (index, index + 1)));
+    }
+
+    /// The byte range of the original that `self.text[start..end]` stands for.
+    fn original(&self, start: usize, end: usize) -> (usize, usize) {
+        (self.origin[start].0, self.origin[end - 1].1)
+    }
+}
+
 const RESERVED_DOMAINS: [&str; 3] = ["example.com", "example.net", "example.org"];
 const RESERVED_TLDS: [&str; 4] = ["example", "test", "invalid", "localhost"];
 
@@ -643,8 +746,24 @@ impl Redactor {
     }
 
     fn text(&mut self, text: &str) -> String {
+        self.rewrite(text, &View::unfolded(text))
+    }
+
+    fn url(&mut self, url: &str) -> String {
+        self.rewrite(url, &View::decoded(url))
+    }
+
+    /// `original` with every finding in `view`, which was read from it, replaced. The rest of
+    /// `original` is kept as it was.
+    fn rewrite(&mut self, original: &str, view: &View) -> String {
+        let text = view.text.as_str();
         let mut spans: Vec<(usize, usize, Option<String>)> = credential_spans(text)
             .into_iter()
+            .chain(
+                parameter_spans(text)
+                    .into_iter()
+                    .map(|(_, start, end)| (start, end)),
+            )
             .map(|(start, end)| (start, end, None))
             .collect();
         for (start, end) in email_spans(text) {
@@ -653,41 +772,27 @@ impl Redactor {
             }
         }
         spans.sort_unstable_by_key(|(start, _, _)| *start);
-        let mut out = String::with_capacity(text.len());
+        let mut out = String::with_capacity(original.len());
         let mut cursor = 0;
         for (start, end, replacement) in spans {
+            let (start, end) = view.original(start, end);
             if start < cursor {
+                // Overlaps a span already replaced: drop the rest of it too.
+                cursor = cursor.max(end);
                 continue;
             }
-            out.push_str(&text[cursor..start]);
-            out.push_str(replacement.as_deref().unwrap_or(REDACTED));
+            out.push_str(&original[cursor..start]);
+            match replacement {
+                None => out.push_str(REDACTED),
+                // Keep an encoded at sign encoded.
+                Some(address) if original[start..end].contains("%40") => {
+                    out.push_str(&address.replace('@', "%40"));
+                }
+                Some(address) => out.push_str(&address),
+            }
             cursor = end;
         }
-        out.push_str(&text[cursor..]);
-        out
-    }
-
-    fn url(&mut self, url: &str) -> String {
-        let url = url.replace("%40", "@");
-        let (path, query) = match url.split_once('?') {
-            Some((path, query)) => (path, Some(query)),
-            None => (url.as_str(), None),
-        };
-        let mut out = self.text(path);
-        if let Some(query) = query {
-            let pairs: Vec<String> = query
-                .split('&')
-                .map(|pair| match pair.split_once('=') {
-                    Some((name, _)) if is_credential_parameter(name) => {
-                        format!("{name}={REDACTED}")
-                    }
-                    Some((name, value)) => format!("{}={}", self.text(name), self.text(value)),
-                    None => self.text(pair),
-                })
-                .collect();
-            out.push('?');
-            out.push_str(&pairs.join("&"));
-        }
+        out.push_str(&original[cursor..]);
         out
     }
 
@@ -798,7 +903,7 @@ mod tests {
         assert!(exchange.response.headers.is_empty());
         assert_eq!(
             exchange.request.url,
-            "/calendar/v3/calendars/person1@example.com/events?key=REDACTED&syncToken=t"
+            "/calendar/v3/calendars/person1%40example.com/events?key=REDACTED&syncToken=t"
         );
         let Body::Json(body) = &exchange.response.body else {
             panic!("json body");
@@ -813,6 +918,102 @@ mod tests {
         // A redacted fixture reads back.
         let text = fixture.to_json().unwrap();
         assert_eq!(Fixture::from_json(&text).unwrap(), fixture);
+    }
+
+    #[test]
+    fn audit_reads_folds_form_bodies_and_the_description() {
+        let mut fixture = Fixture {
+            format: 1,
+            provider: Provider::CalDav,
+            description: "Probe run by dana@contoso.com".to_owned(),
+            exchanges: vec![Exchange {
+                request: Request {
+                    method: "POST".to_owned(),
+                    url: "/token".to_owned(),
+                    headers: [].into(),
+                    body: Body::Text(
+                        "grant_type=refresh_token&refresh_token=1//0abcdef&client_secret=GOCSPX-xyz"
+                            .to_owned(),
+                    ),
+                },
+                response: Response {
+                    status: 200,
+                    headers: [].into(),
+                    body: Body::Text(
+                        "BEGIN:VEVENT\r\nATTENDEE;CN=Bob:mailto:bob.smith@cont\r\n oso.com\r\n\
+                         SUMMARY:A long line\r\n  folded\r\nEND:VEVENT\r\n"
+                            .to_owned(),
+                    ),
+                },
+            }],
+        };
+        let findings = fixture.audit();
+        for (path, kind) in [
+            ("description", FindingKind::EmailAddress),
+            (
+                "exchanges[0].request.body?refresh_token",
+                FindingKind::CredentialParameter,
+            ),
+            (
+                "exchanges[0].request.body?client_secret",
+                FindingKind::CredentialParameter,
+            ),
+            ("exchanges[0].response.body", FindingKind::EmailAddress),
+        ] {
+            assert!(
+                findings.iter().any(|f| f.path == path && f.kind == kind),
+                "{kind:?} at {path} not flagged in {findings:?}"
+            );
+        }
+        assert_eq!(findings.len(), 4, "{findings:?}");
+        assert!(Fixture::from_json(&fixture.to_json().unwrap()).is_err());
+
+        fixture.redact();
+        assert_eq!(fixture.audit(), []);
+        assert_eq!(fixture.description, "Probe run by person1@example.com");
+        assert_eq!(
+            fixture.exchanges[0].request.body,
+            Body::Text(
+                "grant_type=refresh_token&refresh_token=REDACTED&client_secret=REDACTED".to_owned()
+            )
+        );
+        // The folded address is replaced whole; the other fold is kept.
+        assert_eq!(
+            fixture.exchanges[0].response.body,
+            Body::Text(
+                "BEGIN:VEVENT\r\nATTENDEE;CN=Bob:mailto:person2@example.com\r\n\
+                 SUMMARY:A long line\r\n  folded\r\nEND:VEVENT\r\n"
+                    .to_owned()
+            )
+        );
+        assert!(Fixture::from_json(&fixture.to_json().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn a_redacted_url_keeps_its_encoding_for_replay() {
+        let mut fixture = leaky();
+        fixture.redact();
+        let mut replay = fixture.replay();
+        // A client percent-encodes the calendar id in the path, as the recording did.
+        let url = "/calendar/v3/calendars/person1%40example.com/events?key=REDACTED&syncToken=t";
+        assert_eq!(replay.respond("GET", url).unwrap().status, 200);
+        replay.finish().unwrap();
+    }
+
+    #[test]
+    fn parameters_are_found_only_as_pairs() {
+        assert_eq!(
+            super::parameter_spans("?code=abc&key=&sig=REDACTED"),
+            [("code", 6, 9)]
+        );
+        for text in [
+            "/calendars/key=x",
+            "ATTENDEE;CN=Bob:mailto:a@example.com",
+            "encode=1",
+            "<D:href>/a?apikey=",
+        ] {
+            assert_eq!(super::parameter_spans(text), [], "{text}");
+        }
     }
 
     #[test]
