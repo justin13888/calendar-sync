@@ -1,0 +1,5243 @@
+{
+ "cases": [
+  {
+   "name": "testYearly",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1998-09-02T09:00:00",
+    "1999-09-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1999-09-02T09:00:00",
+    "2001-09-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 100
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "2097-09-02T09:00:00",
+    "2197-09-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-02T09:00:00",
+    "1998-03-02T09:00:00",
+    "1999-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T09:00:00",
+    "1997-10-01T09:00:00",
+    "1997-10-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T09:00:00",
+    "1998-01-07T09:00:00",
+    "1998-03-05T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-25T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-12-31T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByNWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 3
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -3
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-11T09:00:00",
+    "1998-01-20T09:00:00",
+    "1998-12-17T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-06T09:00:00",
+    "1998-01-29T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndNWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 3
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-15T09:00:00",
+    "1998-01-20T09:00:00",
+    "1998-03-12T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-02-03T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-03-03T09:00:00",
+    "2001-03-01T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-04-10T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-04-10T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T09:00:00",
+    "1998-05-12T09:00:00",
+    "1998-05-13T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T09:00:00",
+    "1999-01-04T09:00:00",
+    "2000-01-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1998-12-27T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1999-01-03T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T09:00:00",
+    "2004-12-27T09:00:00",
+    "2009-12-28T09:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1998-09-02T06:00:00",
+    "1998-09-02T18:00:00"
+   ]
+  },
+  {
+   "name": "testYearlyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1998-09-02T09:06:00"
+   ]
+  },
+  {
+   "name": "testYearlyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1998-09-02T09:00:06"
+   ]
+  },
+  {
+   "name": "testYearlyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1998-09-02T06:06:00"
+   ]
+  },
+  {
+   "name": "testYearlyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1998-09-02T06:00:06"
+   ]
+  },
+  {
+   "name": "testYearlyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testYearlyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testYearlyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     15
+    ],
+    "byHour": [
+     6,
+     18
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-11-15T18:00:00",
+    "1998-02-15T06:00:00",
+    "1998-11-15T18:00:00"
+   ]
+  },
+  {
+   "name": "testMonthly",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-10-02T09:00:00",
+    "1997-11-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-11-02T09:00:00",
+    "1998-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 18
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1999-03-02T09:00:00",
+    "2000-09-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-02T09:00:00",
+    "1998-03-02T09:00:00",
+    "1999-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T09:00:00",
+    "1997-10-01T09:00:00",
+    "1997-10-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T09:00:00",
+    "1998-01-07T09:00:00",
+    "1998-03-05T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-25T09:00:00",
+    "1997-10-07T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByNWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 3
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -3
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-11T09:00:00",
+    "1997-09-16T09:00:00",
+    "1997-10-16T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-06T09:00:00",
+    "1998-01-29T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndNWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 3
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-15T09:00:00",
+    "1998-01-20T09:00:00",
+    "1998-03-12T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-02-03T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-03-03T09:00:00",
+    "2001-03-01T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-04-10T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-04-10T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T09:00:00",
+    "1998-05-12T09:00:00",
+    "1998-05-13T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T09:00:00",
+    "1999-01-04T09:00:00",
+    "2000-01-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1998-12-27T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1999-01-03T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T09:00:00",
+    "2004-12-27T09:00:00",
+    "2009-12-28T09:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-10-02T06:00:00",
+    "1997-10-02T18:00:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1997-10-02T09:06:00"
+   ]
+  },
+  {
+   "name": "testMonthlyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-10-02T09:00:06"
+   ]
+  },
+  {
+   "name": "testMonthlyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1997-10-02T06:06:00"
+   ]
+  },
+  {
+   "name": "testMonthlyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-10-02T06:00:06"
+   ]
+  },
+  {
+   "name": "testMonthlyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testMonthlyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testMonthlyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "monthly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     13,
+     17
+    ],
+    "byHour": [
+     6,
+     18
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-09-13T18:00:00",
+    "1997-09-17T06:00:00",
+    "1997-10-13T18:00:00"
+   ]
+  },
+  {
+   "name": "testWeekly",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-09T09:00:00",
+    "1997-09-16T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-16T09:00:00",
+    "1997-09-30T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 20
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1998-01-20T09:00:00",
+    "1998-06-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-06T09:00:00",
+    "1998-01-13T09:00:00",
+    "1998-01-20T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T09:00:00",
+    "1997-10-01T09:00:00",
+    "1997-10-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T09:00:00",
+    "1998-01-07T09:00:00",
+    "1998-03-05T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-02-03T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-03-03T09:00:00",
+    "2001-03-01T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-01-01T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-01-01T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T09:00:00",
+    "1998-05-12T09:00:00",
+    "1998-05-13T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T09:00:00",
+    "1999-01-04T09:00:00",
+    "2000-01-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1998-12-27T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1999-01-03T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T09:00:00",
+    "2004-12-27T09:00:00",
+    "2009-12-28T09:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-09T06:00:00",
+    "1997-09-09T18:00:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1997-09-09T09:06:00"
+   ]
+  },
+  {
+   "name": "testWeeklyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-09-09T09:00:06"
+   ]
+  },
+  {
+   "name": "testWeeklyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1997-09-09T06:06:00"
+   ]
+  },
+  {
+   "name": "testWeeklyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-09-09T06:00:06"
+   ]
+  },
+  {
+   "name": "testWeeklyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testWeeklyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testWeeklyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ],
+    "byHour": [
+     6,
+     18
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-04T06:00:00",
+    "1997-09-09T18:00:00"
+   ]
+  },
+  {
+   "name": "testDaily",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T09:00:00",
+    "1997-09-04T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-06T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 92
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-12-03T09:00:00",
+    "1998-03-05T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-02T09:00:00",
+    "1998-01-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T09:00:00",
+    "1997-10-01T09:00:00",
+    "1997-10-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T09:00:00",
+    "1998-01-07T09:00:00",
+    "1998-03-05T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-04T09:00:00",
+    "1997-09-09T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-01-06T09:00:00",
+    "1998-01-08T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-02-03T09:00:00",
+    "1998-03-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-03-03T09:00:00",
+    "2001-03-01T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T09:00:00",
+    "1998-01-01T09:00:00",
+    "1998-04-10T09:00:00",
+    "1998-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-01-01T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-01-01T09:00:00",
+    "1998-07-19T09:00:00",
+    "1999-01-01T09:00:00",
+    "1999-07-19T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T09:00:00",
+    "1998-05-12T09:00:00",
+    "1998-05-13T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T09:00:00",
+    "1999-01-04T09:00:00",
+    "2000-01-03T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1998-12-27T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T09:00:00",
+    "1999-01-03T09:00:00",
+    "2000-01-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T09:00:00",
+    "2004-12-27T09:00:00",
+    "2009-12-28T09:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-03T06:00:00",
+    "1997-09-03T18:00:00"
+   ]
+  },
+  {
+   "name": "testDailyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1997-09-03T09:06:00"
+   ]
+  },
+  {
+   "name": "testDailyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-09-03T09:00:06"
+   ]
+  },
+  {
+   "name": "testDailyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1997-09-03T06:06:00"
+   ]
+  },
+  {
+   "name": "testDailyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-09-03T06:00:06"
+   ]
+  },
+  {
+   "name": "testDailyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testDailyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testDailyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     15,
+     45
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:15:00",
+    "1997-09-03T06:45:00",
+    "1997-09-03T18:15:00"
+   ]
+  },
+  {
+   "name": "testHourly",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T10:00:00",
+    "1997-09-02T11:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T11:00:00",
+    "1997-09-02T13:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 769
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-10-04T10:00:00",
+    "1997-11-05T11:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T01:00:00",
+    "1998-01-01T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T00:00:00",
+    "1997-09-03T01:00:00",
+    "1997-09-03T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T00:00:00",
+    "1998-01-05T01:00:00",
+    "1998-01-05T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T10:00:00",
+    "1997-09-02T11:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T10:00:00",
+    "1997-09-02T11:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T01:00:00",
+    "1998-01-01T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T01:00:00",
+    "1998-01-01T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T01:00:00",
+    "1998-01-01T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T01:00:00",
+    "1998-01-01T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T01:00:00",
+    "1997-12-31T02:00:00",
+    "1997-12-31T03:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T01:00:00",
+    "1997-12-31T02:00:00",
+    "1997-12-31T03:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T01:00:00",
+    "1998-04-10T02:00:00",
+    "1998-04-10T03:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T01:00:00",
+    "1998-04-10T02:00:00",
+    "1998-04-10T03:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T00:00:00",
+    "1998-05-11T01:00:00",
+    "1998-05-11T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T00:00:00",
+    "1997-12-29T01:00:00",
+    "1997-12-29T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T01:00:00",
+    "1997-12-28T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T01:00:00",
+    "1997-12-28T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T00:00:00",
+    "1998-12-28T01:00:00",
+    "1998-12-28T02:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-03T06:00:00",
+    "1997-09-03T18:00:00"
+   ]
+  },
+  {
+   "name": "testHourlyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1997-09-02T10:06:00"
+   ]
+  },
+  {
+   "name": "testHourlyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-09-02T10:00:06"
+   ]
+  },
+  {
+   "name": "testHourlyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1997-09-03T06:06:00"
+   ]
+  },
+  {
+   "name": "testHourlyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-09-03T06:00:06"
+   ]
+  },
+  {
+   "name": "testHourlyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testHourlyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testHourlyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "hourly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     15,
+     45
+    ],
+    "bySecond": [
+     15,
+     45
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:15:45",
+    "1997-09-02T09:45:15",
+    "1997-09-02T10:15:45"
+   ]
+  },
+  {
+   "name": "testMinutely",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:01:00",
+    "1997-09-02T09:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:02:00",
+    "1997-09-02T09:04:00"
+   ]
+  },
+  {
+   "name": "testMinutelyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 1501
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T10:01:00",
+    "1997-09-04T11:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:01:00",
+    "1998-01-01T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T00:00:00",
+    "1997-09-03T00:01:00",
+    "1997-09-03T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T00:00:00",
+    "1998-01-05T00:01:00",
+    "1998-01-05T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:01:00",
+    "1997-09-02T09:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:01:00",
+    "1997-09-02T09:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:01:00",
+    "1998-01-01T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:01:00",
+    "1998-01-01T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:01:00",
+    "1998-01-01T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:01:00",
+    "1998-01-01T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T00:01:00",
+    "1997-12-31T00:02:00",
+    "1997-12-31T00:03:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T00:01:00",
+    "1997-12-31T00:02:00",
+    "1997-12-31T00:03:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T00:01:00",
+    "1998-04-10T00:02:00",
+    "1998-04-10T00:03:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T00:01:00",
+    "1998-04-10T00:02:00",
+    "1998-04-10T00:03:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T00:00:00",
+    "1998-05-11T00:01:00",
+    "1998-05-11T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T00:00:00",
+    "1997-12-29T00:01:00",
+    "1997-12-29T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T00:01:00",
+    "1997-12-28T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T00:01:00",
+    "1997-12-28T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T00:00:00",
+    "1998-12-28T00:01:00",
+    "1998-12-28T00:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-02T18:01:00",
+    "1997-09-02T18:02:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:18:00",
+    "1997-09-02T10:06:00"
+   ]
+  },
+  {
+   "name": "testMinutelyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-09-02T09:01:06"
+   ]
+  },
+  {
+   "name": "testMinutelyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:18:00",
+    "1997-09-03T06:06:00"
+   ]
+  },
+  {
+   "name": "testMinutelyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-09-02T18:01:06"
+   ]
+  },
+  {
+   "name": "testMinutelyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testMinutelyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testMinutelyBySetPos",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "minutely",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     15,
+     30,
+     45
+    ],
+    "bySetPosition": [
+     3,
+     -3
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:15",
+    "1997-09-02T09:00:45",
+    "1997-09-02T09:01:15"
+   ]
+  },
+  {
+   "name": "testSecondly",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:00:01",
+    "1997-09-02T09:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyInterval",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:00:02",
+    "1997-09-02T09:00:04"
+   ]
+  },
+  {
+   "name": "testSecondlyIntervalLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 90061
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T10:01:01",
+    "1997-09-04T11:02:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonth",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:00:01",
+    "1998-01-01T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ]
+   },
+   "expected": [
+    "1997-09-03T00:00:00",
+    "1997-09-03T00:00:01",
+    "1997-09-03T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndMonthDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     5,
+     7
+    ]
+   },
+   "expected": [
+    "1998-01-05T00:00:00",
+    "1998-01-05T00:00:01",
+    "1998-01-05T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:00:01",
+    "1997-09-02T09:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-02T09:00:01",
+    "1997-09-02T09:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:00:01",
+    "1998-01-01T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndNWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byDay": [
+     {
+      "day": "tu",
+      "nthOfPeriod": 1
+     },
+     {
+      "day": "th",
+      "nthOfPeriod": -1
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:00:01",
+    "1998-01-01T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:00:01",
+    "1998-01-01T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndMonthDayAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 1
+     },
+     {
+      "month": 3
+     }
+    ],
+    "byMonthDay": [
+     1,
+     3
+    ],
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "th"
+     }
+    ]
+   },
+   "expected": [
+    "1998-01-01T00:00:00",
+    "1998-01-01T00:00:01",
+    "1998-01-01T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T00:00:01",
+    "1997-12-31T00:00:02",
+    "1997-12-31T00:00:03"
+   ]
+  },
+  {
+   "name": "testSecondlyByYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1997-12-31T00:00:00",
+    "1997-12-31T00:00:01",
+    "1997-12-31T00:00:02",
+    "1997-12-31T00:00:03"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndYearDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     1,
+     100,
+     200,
+     365
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T00:00:01",
+    "1998-04-10T00:00:02",
+    "1998-04-10T00:00:03"
+   ]
+  },
+  {
+   "name": "testSecondlyByMonthAndYearDayNeg",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 4
+    },
+    "byMonth": [
+     {
+      "month": 4
+     },
+     {
+      "month": 7
+     }
+    ],
+    "byYearDay": [
+     -365,
+     -266,
+     -166,
+     -1
+    ]
+   },
+   "expected": [
+    "1998-04-10T00:00:00",
+    "1998-04-10T00:00:01",
+    "1998-04-10T00:00:02",
+    "1998-04-10T00:00:03"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekNo",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     20
+    ]
+   },
+   "expected": [
+    "1998-05-11T00:00:00",
+    "1998-05-11T00:00:01",
+    "1998-05-11T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekNoAndWeekDay",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     1
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-29T00:00:00",
+    "1997-12-29T00:00:01",
+    "1997-12-29T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekNoAndWeekDayLarge",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     52
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T00:00:01",
+    "1997-12-28T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekNoAndWeekDayLast",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     -1
+    ],
+    "byDay": [
+     {
+      "day": "su"
+     }
+    ]
+   },
+   "expected": [
+    "1997-12-28T00:00:00",
+    "1997-12-28T00:00:01",
+    "1997-12-28T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByWeekNoAndWeekDay53",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byWeekNo": [
+     53
+    ],
+    "byDay": [
+     {
+      "day": "mo"
+     }
+    ]
+   },
+   "expected": [
+    "1998-12-28T00:00:00",
+    "1998-12-28T00:00:01",
+    "1998-12-28T00:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByHour",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:00",
+    "1997-09-02T18:00:01",
+    "1997-09-02T18:00:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:00",
+    "1997-09-02T09:06:01",
+    "1997-09-02T09:06:02"
+   ]
+  },
+  {
+   "name": "testSecondlyBySecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:00:06",
+    "1997-09-02T09:00:18",
+    "1997-09-02T09:01:06"
+   ]
+  },
+  {
+   "name": "testSecondlyByHourAndMinute",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:00",
+    "1997-09-02T18:06:01",
+    "1997-09-02T18:06:02"
+   ]
+  },
+  {
+   "name": "testSecondlyByHourAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:00:06",
+    "1997-09-02T18:00:18",
+    "1997-09-02T18:01:06"
+   ]
+  },
+  {
+   "name": "testSecondlyByMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T09:06:06",
+    "1997-09-02T09:06:18",
+    "1997-09-02T09:18:06"
+   ]
+  },
+  {
+   "name": "testSecondlyByHourAndMinuteAndSecond",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byHour": [
+     6,
+     18
+    ],
+    "byMinute": [
+     6,
+     18
+    ],
+    "bySecond": [
+     6,
+     18
+    ]
+   },
+   "expected": [
+    "1997-09-02T18:06:06",
+    "1997-09-02T18:06:18",
+    "1997-09-02T18:18:06"
+   ]
+  },
+  {
+   "name": "testSecondlyByHourAndMinuteAndSecondBug",
+   "start": "2010-03-22T12:01:00",
+   "rule": {
+    "frequency": "secondly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "bySecond": [
+     0
+    ],
+    "byMinute": [
+     1
+    ]
+   },
+   "expected": [
+    "2010-03-22T12:01:00",
+    "2010-03-22T13:01:00",
+    "2010-03-22T14:01:00"
+   ]
+  },
+  {
+   "name": "testUntilNotMatching",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "until",
+     "until": {
+      "type": "floating",
+      "dateTime": "1997-09-05T08:00:00"
+     }
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T09:00:00",
+    "1997-09-04T09:00:00"
+   ]
+  },
+  {
+   "name": "testUntilMatching",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "until",
+     "until": {
+      "type": "floating",
+      "dateTime": "1997-09-04T09:00:00"
+     }
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T09:00:00",
+    "1997-09-04T09:00:00"
+   ]
+  },
+  {
+   "name": "testUntilSingle",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "until",
+     "until": {
+      "type": "floating",
+      "dateTime": "1997-09-02T09:00:00"
+     }
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00"
+   ]
+  },
+  {
+   "name": "testUntilEmpty",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "until",
+     "until": {
+      "type": "floating",
+      "dateTime": "1997-09-01T09:00:00"
+     }
+    }
+   },
+   "expected": []
+  },
+  {
+   "name": "testWkStIntervalMO",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2,
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "su"
+     }
+    ],
+    "firstDayOfWeek": "mo"
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-07T09:00:00",
+    "1997-09-16T09:00:00"
+   ]
+  },
+  {
+   "name": "testWkStIntervalSU",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "weekly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "interval": 2,
+    "byDay": [
+     {
+      "day": "tu"
+     },
+     {
+      "day": "su"
+     }
+    ],
+    "firstDayOfWeek": "su"
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-14T09:00:00",
+    "1997-09-16T09:00:00"
+   ]
+  },
+  {
+   "name": "testDTStartWithMicroseconds",
+   "start": "1997-09-02T09:00:00",
+   "rule": {
+    "frequency": "daily",
+    "end": {
+     "type": "count",
+     "count": 3
+    }
+   },
+   "expected": [
+    "1997-09-02T09:00:00",
+    "1997-09-03T09:00:00",
+    "1997-09-04T09:00:00"
+   ]
+  },
+  {
+   "name": "testMaxYear",
+   "start": "9997-09-02T09:00:00",
+   "rule": {
+    "frequency": "yearly",
+    "end": {
+     "type": "count",
+     "count": 3
+    },
+    "byMonth": [
+     {
+      "month": 2
+     }
+    ],
+    "byMonthDay": [
+     31
+    ]
+   },
+   "expected": []
+  }
+ ]
+}

@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 
 use calendar_sync_model::{
-    EventSeries, EventTimes, Field, InstanceKey, InstanceRange, Loss, LossReason, Override,
-    ProviderEvent, RecurrenceRule, RuleEnd, TimeKind, TimeValue, TimeZoneId,
+    EventSeries, EventTimes, Field, Frequency, InstanceKey, InstanceRange, Loss, LossReason,
+    Override, ProviderEvent, RecurrenceRule, RuleEnd, TimeKind, TimeValue, TimeZoneId,
 };
 use jiff::civil::{DateTime, Time};
 use jiff::tz::{TimeZone, TimeZoneDatabase};
@@ -226,6 +226,7 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
             &frame,
             &place,
             true,
+            losses,
         )?;
         let exclusion_rules = compile(
             recurrence.map(|r| &r.exclusion_rules[..]),
@@ -233,6 +234,7 @@ impl<'z, Z: ZoneSource + ?Sized> Expander<'z, Z> {
             &frame,
             &place,
             false,
+            losses,
         )?;
 
         let (low, high) = Self::range(series, window, &frame, &place);
@@ -762,21 +764,36 @@ fn compile(
     frame: &Frame,
     place: &Place<'_>,
     inclusive: bool,
+    losses: &mut Vec<Loss>,
 ) -> Result<Vec<CivilRule>, Loss> {
     let start = civil(first);
     let mut compiled = Vec::new();
     for rule in rules.unwrap_or_default() {
-        if first.kind() == TimeKind::AllDay
-            && (rule.frequency > calendar_sync_model::Frequency::Daily
-                || !rule.by_hour.is_empty()
-                || !rule.by_minute.is_empty()
-                || !rule.by_second.is_empty())
-        {
-            return Err(Loss::new(
-                Field::Recurrence,
-                LossReason::Malformed,
-                "an all-day series cannot repeat by the hour, minute or second; the series is not shown",
-            ));
+        let mut rule = rule;
+        let mut timeless;
+        if first.kind() == TimeKind::AllDay {
+            if rule.frequency > Frequency::Daily {
+                return Err(Loss::new(
+                    Field::Recurrence,
+                    LossReason::Malformed,
+                    "an all-day series cannot repeat by the hour, minute or second; the series is not shown",
+                ));
+            }
+            if !(rule.by_hour.is_empty() && rule.by_minute.is_empty() && rule.by_second.is_empty())
+            {
+                // RFC 5545 section 3.3.10: with a DATE start, these parts "MUST be ignored".
+                losses.push(Loss::new(
+                    Field::Recurrence,
+                    LossReason::Malformed,
+                    "BYHOUR, BYMINUTE and BYSECOND were ignored, as RFC 5545 section 3.3.10 \
+                     directs for an all-day series",
+                ));
+                timeless = rule.clone();
+                timeless.by_hour.clear();
+                timeless.by_minute.clear();
+                timeless.by_second.clear();
+                rule = &timeless;
+            }
         }
         let until = match &rule.end {
             RuleEnd::Until { until } => Some(frame.civil_of(until, place).ok_or_else(|| {

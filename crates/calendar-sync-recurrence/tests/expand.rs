@@ -465,6 +465,22 @@ fn a_rule_this_library_cannot_read_yields_nothing_and_a_loss() {
     assert_eq!(expansion.losses[0].reason, LossReason::Malformed);
 }
 
+#[test]
+fn an_all_day_series_ignores_times_of_day_and_says_so() {
+    // RFC 5545 section 3.3.10: BYHOUR, BYMINUTE and BYSECOND with a DATE start "MUST be
+    // ignored".
+    let mut daily = counted(Frequency::Daily, 2);
+    daily.by_hour = vec![9, 17];
+    let series = series_of_day(daily);
+    let expansion = expand(&series, "UTC", &wide());
+    assert_eq!(
+        start_values(&expansion),
+        [day("2024-01-01"), day("2024-01-02")]
+    );
+    assert_eq!(expansion.losses.len(), 1);
+    assert!(expansion.losses[0].detail.contains("ignored"));
+}
+
 fn series_of_day(rule: RecurrenceRule) -> EventSeries {
     series(day("2024-01-01"), None, Recurrence::rule(rule))
 }
