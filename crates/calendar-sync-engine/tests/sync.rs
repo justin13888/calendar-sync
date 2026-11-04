@@ -680,6 +680,42 @@ fn a_truncated_full_listing_deletes_only_once_it_completes() {
 }
 
 #[test]
+fn a_record_from_a_newer_mapper_is_never_overwritten_by_an_older_one() {
+    let mut state = synced();
+    let with_mapper = |revision: &str, title: &str, mapper: u32| {
+        let mut record = event("a", revision, title);
+        record.mapper_version = calendar_sync_model::MapperVersion::new(mapper);
+        record
+    };
+    let pass = |state: &mut SyncState, record: ProviderEvent| {
+        let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+        let changes = vec![calendar_sync_engine::Change::Upsert {
+            resource: ResourceId::new("a"),
+            revision: record.revision.clone().unwrap(),
+            event: Some(record),
+        }];
+        state.apply(Input::Outcome {
+            request: list,
+            outcome: listed(changes, Next::Done(cursor("c"))),
+        });
+        state.records()[&ResourceId::new("a")].clone()
+    };
+    // A listing at the revision held writes nothing, even from a newer mapper.
+    assert_eq!(
+        pass(&mut state, with_mapper("1", "same", 2))
+            .fields
+            .title
+            .as_deref(),
+        Some("a")
+    );
+    // A new revision read by a newer mapper replaces the record.
+    let newer = pass(&mut state, with_mapper("2", "newer", 2));
+    assert_eq!(newer.fields.title.as_deref(), Some("newer"));
+    // A new revision read by an older mapper does not.
+    assert_eq!(pass(&mut state, with_mapper("3", "older", 1)), newer);
+}
+
+#[test]
 fn a_replayed_change_changes_nothing() {
     let mut state = synced();
     let before = state.records().clone();
