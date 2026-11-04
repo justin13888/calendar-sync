@@ -6,15 +6,19 @@
 //! - `purity`: the pure crates' normal dependency graphs and sources hold no I/O, clock or RNG.
 //! - `fixture purity`: clippy rejects the purity fixture's clock and filesystem reads.
 //! - `fixture deny`: cargo-deny rejects the deny fixture's copyleft dependency.
+//! - `references verify`: the vendored specs match `references/SHA256SUMS` and its README, offline.
+//! - `references upstream`: the vendored specs still match their sources, downloaded again.
 
 mod fixture;
 mod purity;
+mod references;
 mod toolchain;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Output};
 
-const USAGE: &str = "usage: cargo xtask <toolchain | purity | fixture purity | fixture deny>";
+const USAGE: &str = "usage: cargo xtask <toolchain | purity | fixture purity | fixture deny | \
+                     references verify | references upstream>";
 
 /// An error message for the user. Every check reports failure through this.
 type Result<T = ()> = std::result::Result<T, String>;
@@ -28,6 +32,8 @@ fn main() -> ExitCode {
         ["purity"] => purity::run(&root),
         ["fixture", "purity"] => fixture::purity(&root),
         ["fixture", "deny"] => fixture::deny(&root),
+        ["references", "verify"] => references::verify(&root),
+        ["references", "upstream"] => references::upstream(&root),
         _ => Err(USAGE.to_owned()),
     };
     match outcome {
