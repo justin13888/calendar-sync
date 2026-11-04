@@ -45,7 +45,8 @@
 //! retry from any device names the same resource. Where the provider assigns the id, the create
 //! is queued under its idempotency key; once the provider names the event, the edits queued
 //! behind the create move to that id, an edit that still names the key is redirected to it, and
-//! [`Notice::Remapped`] tells the application.
+//! [`Notice::Remapped`] tells the application. A repeated create keeps the key, so it is looked
+//! up under it rather than sent again.
 //!
 //! # Coalescing
 //!
@@ -235,7 +236,8 @@ pub enum Notice {
     },
     /// A create on a provider that assigns ids was queued under its idempotency key, and the
     /// provider named the event `to`. Edits waiting behind it moved to `to`, and an edit queued
-    /// later under `from` is redirected while the engine still holds `to`.
+    /// later under `from` is redirected while the engine still holds `to`. A repeated create is
+    /// neither moved nor redirected: it keeps the key, and its lookup finds the event.
     Remapped {
         /// The idempotency key the create was queued under.
         from: ResourceId,
@@ -795,7 +797,11 @@ impl SyncState {
             out.push(Effect::Notify(Notice::Expired { edit: edit.id }));
             return;
         }
-        if let Some(to) = self.aliases.get(&edit.resource) {
+        // A create stays under its idempotency key, so that a repeat looks the event up under it
+        // and finds it, instead of sending a create of its own.
+        if !matches!(edit.operation, Operation::Create(_))
+            && let Some(to) = self.aliases.get(&edit.resource)
+        {
             edit.resource = to.clone();
         }
         let resource = edit.resource.clone();
@@ -838,7 +844,8 @@ impl SyncState {
     }
 
     /// Moves the edits waiting behind a create queued under its idempotency key `from` to `to`,
-    /// the id the provider gave the event, and redirects later edits for `from` to it.
+    /// the id the provider gave the event, and redirects later edits for `from` to it. A repeated
+    /// create stays under the key, where its lookup finds the event.
     fn remap(&mut self, from: &ResourceId, to: &ResourceId, out: &mut Vec<Effect>) {
         if from == to {
             return;
@@ -854,7 +861,13 @@ impl SyncState {
         if queue.len() < 2 {
             return;
         }
-        let behind: Vec<Pending> = queue.drain(1..).collect();
+        let (creates, behind): (Vec<Pending>, Vec<Pending>) = queue
+            .drain(1..)
+            .partition(|pending| matches!(pending.edit.operation, Operation::Create(_)));
+        queue.extend(creates);
+        if behind.is_empty() {
+            return;
+        }
         let target = self.edits.entry(to.clone()).or_default();
         let idle = target.is_empty();
         for mut pending in behind {
@@ -928,11 +941,16 @@ impl SyncState {
         }
     }
 
-    fn read_for_edit(&mut self, resource: &ResourceId, out: &mut Vec<Effect>) {
-        let lookup = self.head(resource).is_some_and(
+    /// Whether the head edit for `resource` is a create queued under its idempotency key, so that
+    /// `resource` is a key to look up rather than an id to read.
+    fn looks_up(&self, resource: &ResourceId) -> bool {
+        self.head(resource).is_some_and(
             |head| matches!(&head.edit.operation, Operation::Create(event) if assigns_ids(event)),
-        );
-        let request = if lookup {
+        )
+    }
+
+    fn read_for_edit(&mut self, resource: &ResourceId, out: &mut Vec<Effect>) {
+        let request = if self.looks_up(resource) {
             Request::Lookup {
                 key: resource.clone(),
             }
@@ -977,7 +995,13 @@ impl SyncState {
             }
             return;
         }
-        self.observe(&resource, theirs.clone());
+        if theirs.is_none() && self.looks_up(&resource) {
+            // A key names no event, so a lookup that finds nothing says nothing about one: there
+            // is nothing to record, and nothing a pass should read again.
+            self.learn(&resource);
+        } else {
+            self.observe(&resource, theirs.clone());
+        }
         let Some(head) = self.head(&resource) else {
             return;
         };

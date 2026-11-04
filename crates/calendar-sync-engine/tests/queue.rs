@@ -596,6 +596,82 @@ fn edits_behind_a_graph_create_follow_it_to_the_id_graph_assigns() {
 }
 
 #[test]
+fn a_graph_create_repeated_after_its_remap_is_looked_up_under_its_key() {
+    // Graph has forgotten the `transactionId`, so only the lookup under the key prevents a
+    // duplicate.
+    let mut remote = Graph::forgetting(FaultPlan::none(), 0);
+    let mut device = Device::default();
+    let created = create::<Graph>("edit1", "created");
+    let key = created.resource.clone();
+    device.feed(Input::Edit(created.clone()));
+    device.settle(&mut remote);
+    let (id, _) = remote.events().pop().unwrap();
+    let id = ResourceId::new(id);
+
+    // The same device repeats the create, as a retry by the application would.
+    device.notices.clear();
+    device.feed(Input::Edit(created));
+    assert!(matches!(
+        device.queue.front(),
+        Some((_, Request::Lookup { key: looked_up })) if *looked_up == key
+    ));
+    device.settle(&mut remote);
+    device.applied_once(&EditId::new("edit1"));
+    assert_eq!(titles(&remote), ["created"]);
+    assert_eq!(device.state.records().keys().collect::<Vec<_>>(), [&id]);
+}
+
+#[test]
+fn a_graph_create_repeated_behind_itself_stays_under_its_key() {
+    let mut remote = Graph::forgetting(FaultPlan::none(), 0);
+    let mut device = Device::default();
+    let created = create::<Graph>("edit1", "created");
+    device.feed(Input::Edit(created.clone()));
+    device.feed(Input::Edit(created));
+    device.settle(&mut remote);
+    let endings = device.endings(&EditId::new("edit1"));
+    assert!(
+        matches!(
+            &endings[..],
+            [Notice::Applied { .. }, Notice::Applied { .. }]
+        ),
+        "{endings:?}"
+    );
+    assert_eq!(titles(&remote), ["created"]);
+}
+
+#[test]
+fn a_graph_lookup_that_finds_nothing_during_a_listing_reads_nothing_under_the_key() {
+    let mut remote = Graph::new(FaultPlan::none());
+    let mut device = Device::default();
+    let created = create::<Graph>("edit1", "created");
+    let key = created.resource.clone();
+    device.feed(Input::Sync);
+    device.feed(Input::Edit(created));
+    // The lookup's outcome arrives while the listing is still in flight.
+    let (list, listing) = device.queue.pop_front().unwrap();
+    assert!(matches!(listing, Request::List { .. }));
+    assert!(device.step(&mut remote));
+    let outcome = remote.perform(&listing);
+    device.feed(Input::Outcome {
+        request: list,
+        outcome,
+    });
+    for _ in 0..MAX_REQUESTS {
+        if let Some((_, Request::Read { resource })) = device.queue.front() {
+            assert_ne!(*resource, key, "the key was read as an event id");
+        }
+        if !device.step(&mut remote) {
+            break;
+        }
+    }
+    assert!(device.state.is_quiet());
+    assert!(device.notices.contains(&Notice::Synced));
+    device.applied_once(&EditId::new("edit1"));
+    assert_eq!(titles(&remote), ["created"]);
+}
+
+#[test]
 fn a_create_with_a_client_chosen_id_is_not_remapped() {
     fn check<R: Remote>(mut remote: R) {
         let mut device = Device::default();
