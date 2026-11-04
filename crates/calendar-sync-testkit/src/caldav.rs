@@ -351,6 +351,94 @@ mod tests {
     }
 
     #[test]
+    fn injected_token_expiry_fails_the_precondition() {
+        let plan = FaultPlan::none().at_call(1, Fault::TokenExpired);
+        let mut dav = FakeCalDav::new(plan);
+        let request = SyncCollection {
+            sync_token: Some(
+                dav.sync_collection(&SyncCollection::default())
+                    .unwrap()
+                    .sync_token,
+            ),
+            limit: None,
+        };
+        assert_eq!(
+            dav.sync_collection(&request).unwrap_err(),
+            Error::InvalidSyncToken
+        );
+        assert_eq!(
+            dav.sync_collection(&request).unwrap_err(),
+            Error::InvalidSyncToken
+        );
+        assert_eq!(dav.faults()[0].fault, Fault::TokenExpired);
+        assert!(dav.sync_collection(&SyncCollection::default()).is_ok());
+    }
+
+    #[test]
+    fn replay_reports_a_member_already_reported() {
+        let plan = FaultPlan::none().at_call(1, Fault::Replay);
+        let mut dav = FakeCalDav::new(plan);
+        dav.remote_put("/cal/a.ics", String::new());
+        let initial = dav.sync_collection(&SyncCollection::default()).unwrap();
+        let next = dav
+            .sync_collection(&SyncCollection {
+                sync_token: Some(initial.sync_token),
+                limit: None,
+            })
+            .unwrap();
+        assert_eq!(next.responses, initial.responses);
+        assert_eq!(dav.faults()[0].fault, Fault::Replay);
+    }
+
+    #[test]
+    fn partial_page_truncates_the_report() {
+        let plan = FaultPlan::none().at_call(0, Fault::PartialPage);
+        let mut dav = FakeCalDav::new(plan);
+        let hrefs = ["/cal/a.ics", "/cal/b.ics", "/cal/c.ics", "/cal/d.ics"];
+        for href in hrefs {
+            dav.remote_put(href, String::new());
+        }
+        let mut report = dav.sync_collection(&SyncCollection::default()).unwrap();
+        assert!(report.truncated && report.responses.len() < hrefs.len());
+        assert_eq!(dav.faults()[0].fault, Fault::PartialPage);
+        let mut seen = std::mem::take(&mut report.responses);
+        while report.truncated {
+            report = dav
+                .sync_collection(&SyncCollection {
+                    sync_token: Some(report.sync_token),
+                    limit: None,
+                })
+                .unwrap();
+            seen.append(&mut report.responses);
+        }
+        let seen: Vec<String> = seen
+            .into_iter()
+            .map(|response| match response {
+                SyncResponse::Changed { href, .. } | SyncResponse::Removed { href } => href,
+            })
+            .collect();
+        assert_eq!(seen, hrefs);
+    }
+
+    #[test]
+    fn lost_response_still_applies_the_put() {
+        let plan = FaultPlan::none().at_call(0, Fault::LostResponse);
+        let mut dav = FakeCalDav::new(plan);
+        assert_eq!(
+            dav.put("/cal/a.ics", &Precondition::IfNoneMatch, "x".to_owned())
+                .unwrap_err(),
+            Error::LostResponse
+        );
+        assert_eq!(dav.get("/cal/a.ics").unwrap().body, "x");
+        assert_eq!(
+            dav.put("/cal/a.ics", &Precondition::IfNoneMatch, "x".to_owned())
+                .unwrap_err(),
+            Error::PreconditionFailed
+        );
+        assert_eq!(dav.faults()[0].fault, Fault::LostResponse);
+    }
+
+    #[test]
     fn create_only_put_loses_a_race() {
         let plan = FaultPlan::none().at_call(0, Fault::PreconditionFailed);
         let mut dav = FakeCalDav::new(plan);

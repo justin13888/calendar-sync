@@ -354,6 +354,70 @@ mod tests {
     }
 
     #[test]
+    fn injected_token_expiry_answers_410() {
+        let plan = FaultPlan::none().at_call(1, Fault::TokenExpired);
+        let mut google = FakeGoogle::new(plan);
+        let request = ListRequest {
+            sync_token: google
+                .list(&ListRequest::default())
+                .unwrap()
+                .next_sync_token,
+            ..ListRequest::default()
+        };
+        assert_eq!(google.list(&request).unwrap_err(), Error::Gone);
+        assert_eq!(google.list(&request).unwrap_err(), Error::Gone);
+        assert_eq!(google.faults()[0].fault, Fault::TokenExpired);
+        assert!(google.list(&ListRequest::default()).is_ok());
+    }
+
+    #[test]
+    fn replay_lists_an_event_already_listed() {
+        let plan = FaultPlan::none().at_call(1, Fault::Replay);
+        let mut google = FakeGoogle::new(plan);
+        google.remote_put("a", json!({ "summary": "a" }));
+        let token = google
+            .list(&ListRequest::default())
+            .unwrap()
+            .next_sync_token;
+        let page = google
+            .list(&ListRequest {
+                sync_token: token,
+                ..ListRequest::default()
+            })
+            .unwrap();
+        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.items[0].id, "a");
+        assert_eq!(page.items[0].status, EventStatus::Confirmed);
+        assert_eq!(google.faults()[0].fault, Fault::Replay);
+    }
+
+    #[test]
+    fn partial_page_continues_from_its_page_token() {
+        let plan = FaultPlan::none().at_call(0, Fault::PartialPage);
+        let mut google = FakeGoogle::new(plan);
+        for id in ["a", "b", "c", "d"] {
+            google.remote_put(id, json!({}));
+        }
+        let first = google.list(&ListRequest::default()).unwrap();
+        assert!(first.items.len() < 4);
+        assert!(first.next_page_token.is_some() && first.next_sync_token.is_none());
+        assert_eq!(google.faults()[0].fault, Fault::PartialPage);
+        let mut ids: Vec<String> = first.items.into_iter().map(|event| event.id).collect();
+        let mut page_token = first.next_page_token;
+        while let Some(token) = page_token {
+            let page = google
+                .list(&ListRequest {
+                    page_token: Some(token),
+                    ..ListRequest::default()
+                })
+                .unwrap();
+            ids.extend(page.items.into_iter().map(|event| event.id));
+            page_token = page.next_page_token;
+        }
+        assert_eq!(ids, ["a", "b", "c", "d"]);
+    }
+
+    #[test]
     fn injected_412_comes_from_a_concurrent_edit() {
         let plan = FaultPlan::none().at_call(1, Fault::PreconditionFailed);
         let mut google = FakeGoogle::new(plan);

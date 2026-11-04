@@ -419,6 +419,65 @@ mod tests {
     }
 
     #[test]
+    fn injected_412_comes_from_a_concurrent_edit() {
+        let plan = FaultPlan::none().at_call(1, Fault::PreconditionFailed);
+        let mut graph = FakeGraph::new(plan);
+        let created = graph.create(json!({ "subject": "a" })).unwrap();
+        let error = graph
+            .patch(
+                &created.id,
+                Some(&created.change_key),
+                json!({ "subject": "b" }),
+            )
+            .unwrap_err();
+        assert_eq!(error.status(), Some(412));
+        let current = graph.get(&created.id).unwrap();
+        assert_ne!(current.change_key, created.change_key);
+        assert_eq!(current.body, json!({ "subject": "a" }));
+        assert_eq!(graph.faults()[0].fault, Fault::PreconditionFailed);
+        assert!(
+            graph
+                .patch(
+                    &created.id,
+                    Some(&current.change_key),
+                    json!({ "subject": "b" })
+                )
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn partial_page_continues_from_its_next_link() {
+        let plan = FaultPlan::none().at_call(0, Fault::PartialPage);
+        let mut graph = FakeGraph::new(plan);
+        let created: Vec<String> = (0..4).map(|_| graph.remote_create(json!({}))).collect();
+        let first = graph.delta(&DeltaRequest::default()).unwrap();
+        assert!(first.value.len() < 4);
+        assert!(first.next_link.is_some() && first.delta_link.is_none());
+        assert_eq!(graph.faults()[0].fault, Fault::PartialPage);
+        let mut seen = first.value;
+        let mut link = first.next_link;
+        while let Some(next) = link {
+            let page = graph
+                .delta(&DeltaRequest {
+                    link: Some(next),
+                    max_page_size: None,
+                })
+                .unwrap();
+            seen.extend(page.value);
+            link = page.next_link;
+        }
+        let ids: Vec<String> = seen
+            .into_iter()
+            .map(|item| match item {
+                DeltaItem::Changed(event) => event.id,
+                DeltaItem::Removed { id } => id,
+            })
+            .collect();
+        assert_eq!(ids, created);
+    }
+
+    #[test]
     fn lost_create_duplicates_on_retry() {
         let plan = FaultPlan::none().at_call(0, Fault::LostResponse);
         let mut graph = FakeGraph::new(plan);
