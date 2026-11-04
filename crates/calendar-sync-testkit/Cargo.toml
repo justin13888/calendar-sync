@@ -15,5 +15,8 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 # Unpublished until this crate's release issue.
 publish = false
 
+[dependencies]
+serde_json.workspace = true
+
 [lints]
 workspace = true
