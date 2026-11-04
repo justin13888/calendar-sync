@@ -8,7 +8,8 @@
 //! 1. replaces the free text of events with synthetic text: the JSON fields in
 //!    [`FREE_TEXT_FIELDS`], the iCalendar properties in [`FREE_TEXT_PROPERTIES`], and every `CN`
 //!    parameter. The same text always gets the same replacement, so a title that appears on two
-//!    pages still matches;
+//!    pages still matches. Each link in [`ENCODED_LINK_FIELDS`] becomes [`SYNTHETIC_LINK`],
+//!    because it encodes the calendar's address in a form no audit reads;
 //! 2. runs [`Fixture::redact`], which removes credentials and maps each email address to a stable
 //!    `personN@example.com`;
 //! 3. audits the result, and refuses to return a fixture the audit still flags.
@@ -79,6 +80,14 @@ pub const FREE_TEXT_FIELDS: [&str; 10] = [
     "name",
     "label",
 ];
+
+/// JSON fields holding a link that encodes ids, replaced with [`SYNTHETIC_LINK`] on
+/// [`Recorder::finish`]. Google's `htmlLink` carries an `eid` parameter that is the base64 of the
+/// event id and the calendar id, which is often an email address.
+pub const ENCODED_LINK_FIELDS: [&str; 1] = ["htmlLink"];
+
+/// What every field in [`ENCODED_LINK_FIELDS`] is replaced with.
+pub const SYNTHETIC_LINK: &str = "https://calendar.example.com/event";
 
 /// iCalendar properties whose values are free text, replaced on [`Recorder::finish`].
 pub const FREE_TEXT_PROPERTIES: [&str; 5] =
@@ -192,6 +201,9 @@ impl Scrubber {
                             if FREE_TEXT_FIELDS.contains(&name.as_str()) && !text.is_empty() =>
                         {
                             *text = self.replace(text);
+                        }
+                        Value::String(link) if ENCODED_LINK_FIELDS.contains(&name.as_str()) => {
+                            SYNTHETIC_LINK.clone_into(link);
                         }
                         _ => self.json(field),
                     }
@@ -355,6 +367,7 @@ mod tests {
                     "id": "e1",
                     "summary": "Dinner with Alex",
                     "location": "12 Main Street",
+                    "htmlLink": "https://www.google.com/calendar/event?eid=ZTEgbWVAZ21haWwuY29t",
                     "attendees": [{ "email": "alex@gmail.com", "displayName": "Alex Smith", "comment": "ok" }],
                     "refresh_token": "1//secret"
                 }],
@@ -406,6 +419,8 @@ mod tests {
             "person2@example.com"
         );
         assert_eq!(one["items"][0]["refresh_token"], "REDACTED");
+        // The link's eid is base64 of "e1 me@gmail.com", which no audit reads.
+        assert_eq!(one["items"][0]["htmlLink"], super::SYNTHETIC_LINK);
         // Ids and tokens are not free text.
         assert_eq!(one["items"][0]["id"], "e1");
         assert_eq!(one["nextPageToken"], "p1");

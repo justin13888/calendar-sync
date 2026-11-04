@@ -52,7 +52,8 @@ event content is replaced with synthetic text before it is committed.
 `CalDAV` ones), so `Authorization` and cookies never enter a fixture. `Recorder::finish` replaces
 the free text of events (titles, descriptions, locations, names and comments in JSON; `SUMMARY`,
 `DESCRIPTION`, `LOCATION`, `COMMENT`, `CONTACT` and `CN` in iCalendar) with stable synthetic
-text, runs `Fixture::redact`, and refuses to return a fixture the audit still flags.
+text, replaces Google's `htmlLink`, whose `eid` encodes the calendar's address, with a synthetic
+link, runs `Fixture::redact`, and refuses to return a fixture the audit still flags.
 
 The fixtures in `fixtures/` are synthetic examples of the format. Every file there is audited and
 replayed by `tests/fixtures.rs`.
