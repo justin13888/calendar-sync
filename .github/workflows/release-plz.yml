@@ -1,0 +1,117 @@
+name: release-plz
+
+# Release flow (CONTRIBUTING.md): every push to master opens or updates the release pull request;
+# merging that pull request publishes the crates it bumps. Configuration is in release-plz.toml.
+#
+# No repository secret is involved. The release pull request is opened with the default
+# GITHUB_TOKEN, and crates are published through crates.io trusted publishing.
+
+on:
+  push:
+    branches: [master]
+
+permissions: {}
+
+env:
+  CARGO_TERM_COLOR: always
+  # Each job installs only the mise tools it names.
+  MISE_AUTO_INSTALL: "false"
+
+jobs:
+  # Publishes the crates whose version is not on crates.io yet, then tags them and creates their
+  # GitHub releases. With `release_always = false` this only acts on a merged release pull request.
+  release:
+    name: release
+    if: github.repository == 'justin13888/calendar-sync'
+    runs-on: ubuntu-latest
+    permissions:
+      # Tags and GitHub releases
+      contents: write
+      # The OIDC token crates.io trusted publishing exchanges for a short-lived publish token
+      id-token: write
+    concurrency:
+      group: release-plz-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: release-plz
+          cache: false
+      # A crate is publishable unless its Cargo.toml sets `publish = false` (`cargo metadata`
+      # reports that as `[]`). Until one is, there is nothing to publish, and the token exchange
+      # below would fail because no crate has a trusted publisher on crates.io yet.
+      - name: Count the publishable crates
+        id: publishable
+        run: |
+          count="$(cargo metadata --no-deps --format-version 1 --locked \
+            | jq '[.packages[] | select(.publish != [])] | length')"
+          echo "publishable crates: $count"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Get a crates.io token through trusted publishing
+        id: crates-io-auth
+        if: steps.publishable.outputs.count != '0'
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+      - name: Publish, tag and release
+        if: steps.publishable.outputs.count != '0'
+        env:
+          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
+        run: release-plz release
+
+  # Opens the release pull request, or updates the open one, with the version bumps and changelogs
+  # the commits since the last release call for.
+  release-pr:
+    name: release-pr
+    if: github.repository == 'justin13888/calendar-sync'
+    runs-on: ubuntu-latest
+    permissions:
+      # Push the release branch
+      contents: write
+      # Open and label the release pull request
+      pull-requests: write
+      # Dispatch ci.yml on the release branch
+      actions: write
+    concurrency:
+      group: release-plz-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          # `semver_check = true` runs cargo-semver-checks against the last published version.
+          install_args: release-plz github:obi1kenobi/cargo-semver-checks
+          cache: false
+      # release-plz commits the version bumps locally before sending them to GitHub.
+      - name: Configure the git author
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Open or update the release pull request
+        id: release-pr
+        env:
+          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          output="$(release-plz release-pr --output json)"
+          echo "$output"
+          branch="$(jq -r '.prs[0].head_branch // empty' <<< "$output")"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      # A pull request opened with GITHUB_TOKEN triggers no `pull_request` workflow, so the
+      # required `ci-success` check would never report on it. A `workflow_dispatch` is exempt from
+      # that rule, and its check runs attach to the release branch's head commit.
+      - name: Run CI on the release branch
+        if: steps.release-pr.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.release-pr.outputs.branch }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
