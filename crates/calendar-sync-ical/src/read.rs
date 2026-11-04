@@ -637,7 +637,8 @@ pub(crate) struct Group {
     /// The overrides, by instance.
     pub(crate) overrides: BTreeMap<InstanceKey, Located>,
     /// `VEVENT`s with this `UID` that could not be read as a master or an override: no `DTSTART`,
-    /// a malformed `RECURRENCE-ID`, or a duplicate. Writing never touches them.
+    /// a malformed `RECURRENCE-ID`, or a duplicate. A write keeps them, except that writing a
+    /// master or an override replaces the unreadable `VEVENT` it would otherwise sit beside.
     pub(crate) unread: Vec<(usize, usize)>,
     pub(crate) losses: Vec<Loss>,
 }

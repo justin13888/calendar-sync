@@ -302,11 +302,17 @@ impl IcalDocument {
                     edit.removed.insert((located.calendar, located.item));
                 }
                 (None, Some(Override::Modified { event, range })) => {
+                    // An override of this instance the reader could not read is replaced, as an
+                    // unread master is, rather than kept beside the new one.
+                    edit.removed
+                        .extend(unread_overrides(&self.calendars, &group.unread, key));
                     let event = edit.without_recurrence(event);
                     let component = edit.create(&self.calendars[home], Some((key, *range)), &event);
                     edit.added.push(component);
                 }
                 (None, Some(Override::Cancelled { .. })) => {
+                    edit.removed
+                        .extend(unread_overrides(&self.calendars, &group.unread, key));
                     let component = edit.cancelled(&self.calendars[home], key);
                     edit.added.push(component);
                 }
@@ -525,6 +531,28 @@ impl Edit<'_> {
         self.losses.extend(writer.losses);
         (component, writer.needed)
     }
+}
+
+/// The unread `VEVENT`s among `unread` whose `RECURRENCE-ID` reads as `key`: overrides of that
+/// instance with no readable `DTSTART`.
+fn unread_overrides(
+    calendars: &[IcalCst<'static>],
+    unread: &[(usize, usize)],
+    key: &InstanceKey,
+) -> Vec<(usize, usize)> {
+    unread
+        .iter()
+        .copied()
+        .filter(|&(calendar, item)| match &calendars[calendar].items[item] {
+            IcalItem::Component(component) => {
+                read::event(component, &Zones::of(&calendars[calendar]))
+                    .instance
+                    .flatten()
+                    .is_some_and(|(read, _)| read == *key)
+            }
+            _ => false,
+        })
+        .collect()
 }
 
 /// Marks an existing override cancelled.

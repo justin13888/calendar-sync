@@ -385,6 +385,143 @@ fn adding_cancelling_and_removing_overrides() {
 }
 
 #[test]
+fn a_range_change_rewrites_only_the_recurrence_id() {
+    let mut document = IcalDocument::parse(SERIES.as_bytes());
+    let mut series = read_one(&document).series;
+    let moved = InstanceKey::new(new_york(datetime(2026, 1, 7, 9, 30, 0, 0)));
+    let Some(Override::Modified { range, .. }) = series.overrides.get_mut(&moved) else {
+        panic!("the moved instance is modified");
+    };
+    *range = InstanceRange::ThisAndFuture;
+    let losses = document.write(&series, stamp()).unwrap();
+    assert!(losses.is_empty(), "{losses:#?}");
+    let widened = text(&document);
+    assert_eq!(
+        changed_lines(SERIES, &widened),
+        [(
+            "RECURRENCE-ID;TZID=America/New_York:20260107T093000\r\n".to_owned(),
+            "RECURRENCE-ID;TZID=America/New_York;RANGE=THISANDFUTURE:20260107T093000\r\n"
+                .to_owned()
+        )]
+    );
+    let reread = read_one(&IcalDocument::parse(widened.as_bytes()));
+    assert!(matches!(
+        reread.series.overrides[&moved],
+        Override::Modified {
+            range: InstanceRange::ThisAndFuture,
+            ..
+        }
+    ));
+
+    // And back: the parameter is dropped.
+    let Some(Override::Modified { range, .. }) = series.overrides.get_mut(&moved) else {
+        panic!("the moved instance is modified");
+    };
+    *range = InstanceRange::ThisInstance;
+    document.write(&series, stamp()).unwrap();
+    assert_eq!(text(&document), SERIES);
+}
+
+/// A series whose master and one override have no `DTSTART`, so neither reads.
+const UNREADABLE: &str = concat!(
+    "BEGIN:VCALENDAR\r\n",
+    "VERSION:2.0\r\n",
+    "PRODID:-//Example Corp//Calendar//EN\r\n",
+    "BEGIN:VEVENT\r\n",
+    "UID:broken@example.com\r\n",
+    "DTSTAMP:20260101T000000Z\r\n",
+    "SUMMARY:No start\r\n",
+    "END:VEVENT\r\n",
+    "BEGIN:VEVENT\r\n",
+    "UID:broken@example.com\r\n",
+    "DTSTAMP:20260101T000000Z\r\n",
+    "RECURRENCE-ID:20260107T093000Z\r\n",
+    "SUMMARY:No start either\r\n",
+    "END:VEVENT\r\n",
+    "END:VCALENDAR\r\n",
+);
+
+fn unreadable_series() -> (EventSeries, InstanceKey) {
+    let mut fields = NormalizedEvent::new(
+        EventTimes::new(
+            TimeValue::instant("2026-01-05T09:30:00Z".parse().unwrap()),
+            Some(TimeValue::instant("2026-01-05T09:45:00Z".parse().unwrap())),
+        )
+        .unwrap(),
+    );
+    fields.title = Some("Fixed".to_owned());
+    let mut ids = ProviderIds::new(Provider::CalDav, "/calendars/alice/team/standup.ics");
+    ids.ical_uid = Some("broken@example.com".to_owned());
+    let master = ProviderEvent {
+        ids,
+        revision: None,
+        mapper_version: MAPPER_VERSION,
+        fields,
+        passthrough: calendar_sync_model::Passthrough::new(),
+    };
+    let key = InstanceKey::new(TimeValue::instant("2026-01-07T09:30:00Z".parse().unwrap()));
+    (
+        EventSeries {
+            master: Some(master),
+            overrides: std::collections::BTreeMap::new(),
+        },
+        key,
+    )
+}
+
+#[test]
+fn writing_a_master_replaces_an_unreadable_one() {
+    let mut document = IcalDocument::parse(UNREADABLE.as_bytes());
+    let (series, _) = unreadable_series();
+    document.write(&series, stamp()).unwrap();
+    let written = text(&document);
+    assert!(!written.contains("SUMMARY:No start\r\n"), "{written}");
+    // The unreadable override is not the master's to replace.
+    assert!(written.contains("SUMMARY:No start either\r\n"), "{written}");
+    assert_eq!(written.matches("BEGIN:VEVENT").count(), 2, "{written}");
+    let reread = read_one(&IcalDocument::parse(written.as_bytes()));
+    assert_eq!(
+        reread.series.master.unwrap().fields.title.as_deref(),
+        Some("Fixed")
+    );
+}
+
+#[test]
+fn writing_an_override_replaces_an_unreadable_one() {
+    for cancelled in [false, true] {
+        let mut document = IcalDocument::parse(UNREADABLE.as_bytes());
+        let (mut series, key) = unreadable_series();
+        let instance = if cancelled {
+            Override::Cancelled {
+                ids: None,
+                revision: None,
+            }
+        } else {
+            let mut event = series.master.clone().unwrap();
+            event.fields.title = Some("Moved".to_owned());
+            Override::Modified {
+                event: Box::new(event),
+                range: InstanceRange::ThisInstance,
+            }
+        };
+        series.overrides.insert(key.clone(), instance);
+        document.write(&series, stamp()).unwrap();
+        let written = text(&document);
+        assert!(!written.contains("No start"), "{written}");
+        assert_eq!(
+            written.matches("RECURRENCE-ID:20260107T093000Z").count(),
+            1,
+            "{written}"
+        );
+        let reread = read_one(&IcalDocument::parse(written.as_bytes()));
+        assert_eq!(
+            matches!(reread.series.overrides[&key], Override::Cancelled { .. }),
+            cancelled
+        );
+    }
+}
+
+#[test]
 fn removing_the_series_removes_only_its_events() {
     let mut document = IcalDocument::parse(SERIES.as_bytes());
     let uid = read_one(&document).series.master.unwrap().ids;
