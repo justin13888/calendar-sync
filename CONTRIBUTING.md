@@ -47,7 +47,7 @@ Every task is defined in `mise.toml` and runs with `mise run <task>`.
 | `msrv` | Checks that the workspace builds on the MSRV |
 | `semver` | Checks published crates for semver violations. CI does not run it; release pull requests run the same check (see [Releasing](#releasing)) |
 | `commits:check` | Checks that every commit on the branch follows the commit convention |
-| `ci` | Runs every gate above, from `toolchain` to `commits:check`, in order |
+| `ci` | Runs `toolchain`, `lint`, `clippy`, `test`, `doc`, `wasm`, `purity`, `deny`, `msrv`, `semver` and `commits:check`, in that order |
 
 Run `mise run fix` before `mise run lint` when a linter complains: it fixes what the tools can fix.
 
