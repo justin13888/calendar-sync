@@ -425,7 +425,11 @@ impl SyncState {
     /// Reads `resource` again, because an outcome about it could not be ordered against what was
     /// already learned. A pass in progress reads it before it applies. Otherwise a read of its
     /// own does, unless one is in flight.
+    ///
+    /// A read already in flight may have been performed before the doubted outcome, so it is
+    /// doubted in turn: its outcome is not recorded, and a fresh read follows it.
     fn doubt(&mut self, resource: &ResourceId, out: &mut Vec<Effect>) {
+        self.learn(resource);
         if let Some(pass) = &mut self.pass {
             if pass.done.is_some() {
                 pass.staged.insert(resource.clone(), Staged::Unread);
