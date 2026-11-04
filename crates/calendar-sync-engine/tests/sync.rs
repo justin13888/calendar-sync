@@ -966,6 +966,77 @@ fn an_edit_s_read_older_than_a_committed_pass_does_not_replace_its_record() {
 }
 
 #[test]
+fn a_read_in_flight_when_a_write_is_doubted_does_not_overwrite_it() {
+    let mut state = synced();
+    // A pass asks for its listing, then an edit reads `a` and plans its write.
+    let (list, _) = requests(&state.apply(Input::Sync))[0].clone();
+    let base = fields("a");
+    let mut ours = base.clone();
+    ours.title = Some("mine".to_owned());
+    let effects = state.apply(Input::Edit(Edit {
+        id: EditId::new("e1"),
+        resource: ResourceId::new("a"),
+        operation: Operation::Update { base, ours },
+        role: Role::Owner,
+        expires_at: None,
+    }));
+    let (read, _) = requests(&effects)[0].clone();
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "1", "a"))),
+    });
+    let (write, request) = requests(&effects)[0].clone();
+    assert!(matches!(request, Request::Update { .. }));
+    // The listing, asked for before that read, reports `a`. It may be older than the read, so
+    // the pass reads `a` while the write is in flight.
+    let effects = state.apply(Input::Outcome {
+        request: list,
+        outcome: listed(
+            vec![upsert(&event("a", "1", "a"))],
+            Next::Done(cursor("c2")),
+        ),
+    });
+    let (old_read, request) = requests(&effects)[0].clone();
+    assert_eq!(
+        request,
+        Request::Read {
+            resource: ResourceId::new("a")
+        }
+    );
+    // The write lands at revision 2. The listing was learned after the write was asked for, so
+    // the write is doubted, and so is the pass's read already in flight.
+    let effects = state.apply(Input::Outcome {
+        request: write,
+        outcome: Outcome::Written(event("a", "2", "mine")),
+    });
+    assert!(
+        matches!(&effects[..], [Effect::Notify(Notice::Applied { edit, .. })] if edit.as_str() == "e1")
+    );
+    assert!(state.is_syncing());
+    // That read was performed before the write landed. It is not recorded: `a` is read again.
+    let effects = state.apply(Input::Outcome {
+        request: old_read,
+        outcome: Outcome::Read(Some(event("a", "1", "a"))),
+    });
+    let (read, request) = requests(&effects)[0].clone();
+    assert_eq!(
+        request,
+        Request::Read {
+            resource: ResourceId::new("a")
+        }
+    );
+    assert!(state.is_syncing());
+    let effects = state.apply(Input::Outcome {
+        request: read,
+        outcome: Outcome::Read(Some(event("a", "2", "mine"))),
+    });
+    assert_eq!(effects, [Effect::Notify(Notice::Synced)]);
+    assert_eq!(revision(&state, "a"), "2");
+    assert_eq!(state.cursor(), Some(&cursor("c2")));
+    assert!(state.is_quiet());
+}
+
+#[test]
 fn an_edit_survives_a_full_resync() {
     let mut state = synced();
     let base = fields("a");
