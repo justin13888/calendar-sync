@@ -315,7 +315,9 @@ impl Fixture {
     /// becomes `personN@example.com`, the same address always the same replacement. An address
     /// written with `%40` in a URL is found too, and its replacement keeps the `%40`, so a
     /// client that sends the recorded URL still matches the redacted one. A value split by an
-    /// iCalendar line fold is replaced whole, fold included; every other fold is kept.
+    /// iCalendar line fold is replaced whole, fold included; every other fold is kept. A fold
+    /// also separates a value from the word before it, so one that follows a fold is found
+    /// although unfolding joins the two.
     pub fn redact(&mut self) {
         let mut redactor = Redactor::default();
         self.description = redactor.text(&self.description);
@@ -517,14 +519,13 @@ fn audit_json(value: &Value, path: &str, push: &mut impl FnMut(String, FindingKi
 
 fn audit_text(text: &str, path: &str, push: &mut impl FnMut(String, FindingKind)) {
     let view = View::unfolded(text);
-    let text = view.text.as_str();
-    for (name, _, _) in parameter_spans(text) {
+    for (name, _, _) in read_both(text, &view, parameter_spans) {
         push(format!("{path}?{name}"), FindingKind::CredentialParameter);
     }
-    if !credential_spans(text).is_empty() {
+    if !read_both(text, &view, credentials).is_empty() {
         push(path.to_owned(), FindingKind::CredentialValue);
     }
-    if !email_spans(text).is_empty() {
+    if !email_spans(&view.text).is_empty() {
         push(path.to_owned(), FindingKind::EmailAddress);
     }
 }
@@ -584,6 +585,39 @@ fn credential_spans(text: &str) -> Vec<(usize, usize)> {
         }
     }
     spans
+}
+
+/// [`credential_spans`] in the shape [`read_both`] takes.
+fn credentials(text: &str) -> Vec<((), usize, usize)> {
+    credential_spans(text)
+        .into_iter()
+        .map(|(start, end)| ((), start, end))
+        .collect()
+}
+
+/// What `detect` finds in `original`, read both through `view` and as written, as byte ranges
+/// of `original`. A fold that `view` removes can split a value, which only `view` sees whole,
+/// or can be the only thing between a word and the value after it (`foo\r\n client_secret=x`
+/// unfolds to `fooclient_secret=x`), which only `original` sees apart. A finding of `original`
+/// that overlaps one of `view` is the same finding and is dropped.
+fn read_both<'t, T>(
+    original: &'t str,
+    view: &'t View,
+    detect: impl Fn(&'t str) -> Vec<(T, usize, usize)>,
+) -> Vec<(T, usize, usize)> {
+    let mut found: Vec<(T, usize, usize)> = detect(&view.text)
+        .into_iter()
+        .map(|(item, start, end)| {
+            let (start, end) = view.original(start, end);
+            (item, start, end)
+        })
+        .collect();
+    for (item, start, end) in detect(original) {
+        if !found.iter().any(|(_, s, e)| start < *e && *s < end) {
+            found.push((item, start, end));
+        }
+    }
+    found
 }
 
 /// The values of credential parameters in `text`: `name=value` pairs that start the text or
@@ -757,25 +791,28 @@ impl Redactor {
     /// `original` is kept as it was.
     fn rewrite(&mut self, original: &str, view: &View) -> String {
         let text = view.text.as_str();
-        let mut spans: Vec<(usize, usize, Option<String>)> = credential_spans(text)
+        // Every span is a byte range of `original`.
+        let mut spans: Vec<(usize, usize, Option<String>)> = read_both(original, view, credentials)
             .into_iter()
+            .map(|((), start, end)| (start, end))
             .chain(
-                parameter_spans(text)
+                read_both(original, view, parameter_spans)
                     .into_iter()
                     .map(|(_, start, end)| (start, end)),
             )
             .map(|(start, end)| (start, end, None))
             .collect();
         for (start, end) in email_spans(text) {
+            let address = &text[start..end];
+            let (start, end) = view.original(start, end);
             if !spans.iter().any(|(s, e, _)| start < *e && *s < end) {
-                spans.push((start, end, Some(self.email(&text[start..end]))));
+                spans.push((start, end, Some(self.email(address))));
             }
         }
         spans.sort_unstable_by_key(|(start, _, _)| *start);
         let mut out = String::with_capacity(original.len());
         let mut cursor = 0;
         for (start, end, replacement) in spans {
-            let (start, end) = view.original(start, end);
             if start < cursor {
                 // Overlaps a span already replaced: drop the rest of it too.
                 cursor = cursor.max(end);
@@ -836,8 +873,8 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        Body, Exchange, FindingKind, Fixture, FixtureError, Provider, ReplayError, Request,
-        Response, credential_spans, email_spans,
+        Body, Exchange, Finding, FindingKind, Fixture, FixtureError, Provider, ReplayError,
+        Request, Response, credential_spans, email_spans,
     };
 
     fn exchange(url: &str, body: Body) -> Exchange {
@@ -987,6 +1024,52 @@ mod tests {
             )
         );
         assert!(Fixture::from_json(&fixture.to_json().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn a_fold_separates_a_value_from_the_word_before_it() {
+        // Unfolding joins each value to the word before it: `fooclient_secret`, `fooya29.`.
+        let text = "foo\n client_secret=GOCSPX-x\r\nbar\r\n ya29.a0AfH6SMBx";
+        let mut fixture = Fixture {
+            format: 1,
+            provider: Provider::CalDav,
+            description: String::new(),
+            exchanges: vec![Exchange {
+                request: Request {
+                    method: "PUT".to_owned(),
+                    url: "/cal/a.ics".to_owned(),
+                    headers: [].into(),
+                    body: Body::Text(text.to_owned()),
+                },
+                response: Response {
+                    status: 204,
+                    headers: [].into(),
+                    body: Body::Empty,
+                },
+            }],
+        };
+        let findings = fixture.audit();
+        assert_eq!(
+            findings,
+            [
+                Finding {
+                    path: "exchanges[0].request.body?client_secret".to_owned(),
+                    kind: FindingKind::CredentialParameter,
+                },
+                Finding {
+                    path: "exchanges[0].request.body".to_owned(),
+                    kind: FindingKind::CredentialValue,
+                },
+            ]
+        );
+        assert!(Fixture::from_json(&fixture.to_json().unwrap()).is_err());
+
+        fixture.redact();
+        assert_eq!(fixture.audit(), []);
+        assert_eq!(
+            fixture.exchanges[0].request.body,
+            Body::Text("foo\n client_secret=REDACTED\r\nbar\r\n REDACTED".to_owned())
+        );
     }
 
     #[test]
