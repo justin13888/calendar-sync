@@ -499,6 +499,33 @@ fn an_unknown_time_zone_yields_nothing_and_a_loss() {
 }
 
 #[test]
+fn zones_may_come_from_a_closure() {
+    let series = series(
+        zoned("2024-01-01T10:00", "Office"),
+        None,
+        Recurrence::rule(counted(Frequency::Daily, 2)),
+    );
+    let office =
+        |id: &calendar_sync_model::TimeZoneId| (id.as_str() == "Office").then(|| tz("Asia/Tokyo"));
+    let expansion =
+        calendar_sync_recurrence::Expander::new(&office, tz("UTC")).expand(&series, &wide());
+    assert_eq!(
+        starts(&expansion),
+        [ts("2024-01-01T01:00:00Z"), ts("2024-01-02T01:00:00Z")]
+    );
+}
+
+#[test]
+fn an_extra_date_of_another_form_is_left_out_and_reported() {
+    let mut recurrence = Recurrence::rule(counted(Frequency::Daily, 2));
+    recurrence.dates.push(day("2024-01-10"));
+    let series = series(floating("2024-01-01T09:00"), None, recurrence);
+    let expansion = expand(&series, "UTC", &wide());
+    assert_eq!(expansion.occurrences.len(), 2);
+    assert_eq!(expansion.losses[0].reason, LossReason::Malformed);
+}
+
+#[test]
 fn an_endless_series_is_bounded_by_the_window() {
     let series = series(
         instant("1970-01-01T00:00:00Z"),
