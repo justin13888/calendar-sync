@@ -1049,9 +1049,13 @@ impl SyncState {
                     .head(resource)
                     .is_some_and(|head| matches!(head.edit.operation, Operation::Create(_)));
                 let named = ResourceId::of(&event);
-                self.observe_write(request, resource, Some(event), out);
                 if created {
+                    // Where the provider named the event, a doubtful outcome is checked by
+                    // reading that id: the key names nothing to read.
+                    self.observe_write(request, &named, Some(event), out);
                     self.remap(resource, &named, out);
+                } else {
+                    self.observe_write(request, resource, Some(event), out);
                 }
                 self.finish(resource, None, out);
             }
