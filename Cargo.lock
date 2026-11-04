@@ -109,6 +109,12 @@ version = "0.1.0"
 [[package]]
 name = "calendar-sync-ical"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "ical-rs",
+ "jiff",
+ "proptest",
+]
 
 [[package]]
 name = "calendar-sync-model"
@@ -251,6 +257,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
+name = "ical-rs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dbc009237124ae236eb886a57bda65357729b6b8ff7ad21113de2cea933e02a"
+dependencies = [
+ "jiff",
+ "jiff-tzdb",
+ "memchr",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -275,6 +292,7 @@ dependencies = [
  "defmt",
  "jiff-core",
  "jiff-static",
+ "jiff-tzdb",
  "log",
  "portable-atomic",
  "portable-atomic-util",
@@ -302,6 +320,12 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
+
+[[package]]
+name = "jiff-tzdb"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa8377070c6bae868759445e5a77f66d84f0b72f3a054bfb00e6d038b8282da7"
 
 [[package]]
 name = "libc"
