@@ -46,13 +46,16 @@
 //!
 //! [`fixture::Fixture`] is the format for HTTP exchanges recorded from live probes. A fixture
 //! that carries a credential or an email address outside the example domains cannot be loaded;
-//! see the [`fixture`] module.
+//! see the [`fixture`] module. A live probe records its exchanges with a
+//! [`recorder::Recorder`], which keeps only the headers a replay needs, replaces the free text of
+//! events with synthetic text, and redacts what remains before it returns the fixture.
 
 pub mod caldav;
 mod fault;
 pub mod fixture;
 pub mod google;
 pub mod graph;
+pub mod recorder;
 mod rng;
 pub mod seam;
 mod server;

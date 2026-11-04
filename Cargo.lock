@@ -101,6 +101,14 @@ dependencies = [
 [[package]]
 name = "calendar-sync-google"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-engine",
+ "calendar-sync-ical",
+ "calendar-sync-model",
+ "calendar-sync-testkit",
+ "jiff",
+ "serde_json",
+]
 
 [[package]]
 name = "calendar-sync-graph"

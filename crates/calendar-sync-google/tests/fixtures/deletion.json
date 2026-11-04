@@ -1,0 +1,78 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: an incremental list reports a deleted event; a conditional delete succeeds, and deleting it again answers 410",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events?syncToken=CPDAlvWDx70CEPDAlvWDx70CGAY%3D"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5k16q0i\"",
+            "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAc=",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784800000\"",
+                "id": "evt002",
+                "status": "cancelled"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/calendar/v3/calendars/primary/events/evt001",
+        "headers": {
+          "if-match": "\"3181161784799000\""
+        }
+      },
+      "response": {
+        "status": 204
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/calendar/v3/calendars/primary/events/evt001",
+        "headers": {
+          "if-match": "\"3181161784799000\""
+        }
+      },
+      "response": {
+        "status": 410,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 410,
+              "message": "Resource has been deleted",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "deleted",
+                  "message": "Resource has been deleted"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
