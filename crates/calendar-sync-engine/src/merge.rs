@@ -372,6 +372,27 @@ impl Merger {
         theirs: Option<&Attendee>,
     ) -> Option<Attendee> {
         let address = display_address(base, ours, theirs);
+        if let (Some(b), Some(o), None) = (base, ours, theirs) {
+            // The organizer removed the writer. A changed reply is the writer's own, so it
+            // conflicts with the removal; a change to the rest of the entry is refused. Either
+            // way the removal stands.
+            if rest(b) != rest(o) {
+                self.refused.push(Refused {
+                    field: Field::Attendees,
+                    attendee: Some(address.clone()),
+                });
+            }
+            if b.participation != o.participation {
+                self.conflicts.push(Conflict {
+                    field: Field::Attendees,
+                    attendee: Some(address),
+                    base: FieldValue::Attendee(Some(b.clone())),
+                    ours: FieldValue::Attendee(Some(o.clone())),
+                    theirs: FieldValue::Attendee(None),
+                });
+            }
+            return None;
+        }
         let (Some(b), Some(o), Some(t)) = (base, ours, theirs) else {
             // Adding or removing itself is the organizer's call.
             return self.merge(
@@ -385,11 +406,6 @@ impl Merger {
             );
         };
 
-        // Everything but the reply: compare with the reply masked out.
-        let rest = |a: &Attendee| Attendee {
-            participation: Participation::NeedsAction,
-            ..a.clone()
-        };
         let mut entry = self.merge(
             Field::Attendees,
             Some(&address),
@@ -417,6 +433,14 @@ impl Merger {
             };
         entry.participation = participation;
         Some(entry)
+    }
+}
+
+/// Everything in an attendee entry but the reply: the entry with its reply masked out.
+fn rest(attendee: &Attendee) -> Attendee {
+    Attendee {
+        participation: Participation::NeedsAction,
+        ..attendee.clone()
     }
 }
 

@@ -2,7 +2,7 @@
 //! passthrough.
 
 use calendar_sync_engine::merge::merge;
-use calendar_sync_engine::{FieldValue, MergeOutcome, Refused, Role};
+use calendar_sync_engine::{Conflict, FieldValue, MergeOutcome, Refused, Role};
 use calendar_sync_model::{
     Alert, AlertAction, AlertTrigger, Attendee, EventStatus, EventTimes, Field, Frequency,
     MapperVersion, NormalizedEvent, Organizer, Participation, Provider, ProviderEvent, ProviderIds,
@@ -418,6 +418,52 @@ fn an_attendee_may_reply_while_the_organizer_edits_its_entry() {
     assert!(outcome.changed);
     assert!(outcome.conflicts.is_empty());
     assert!(outcome.refused.is_empty());
+}
+
+#[test]
+fn an_attendee_reply_conflicts_with_the_organizer_removing_it() {
+    let base = event();
+    let mut ours = event();
+    ours.attendees[0].participation = Participation::Accepted;
+    let mut theirs = event();
+    theirs.attendees.remove(0);
+
+    let outcome = merge(&base, &ours, &provider(theirs.clone()), &attendee());
+
+    assert_eq!(outcome.event.fields, theirs);
+    assert!(!outcome.changed);
+    assert!(outcome.refused.is_empty());
+    assert_eq!(
+        outcome.conflicts,
+        [Conflict {
+            field: Field::Attendees,
+            attendee: Some(ME.to_owned()),
+            base: FieldValue::Attendee(Some(base.attendees[0].clone())),
+            ours: FieldValue::Attendee(Some(ours.attendees[0].clone())),
+            theirs: FieldValue::Attendee(None),
+        }]
+    );
+}
+
+#[test]
+fn an_attendee_edit_to_the_rest_of_its_removed_entry_is_refused() {
+    let base = event();
+    let mut ours = event();
+    ours.attendees[0].name = Some("Me".to_owned());
+    let mut theirs = event();
+    theirs.attendees.remove(0);
+
+    let outcome = merge(&base, &ours, &provider(theirs.clone()), &attendee());
+
+    assert_eq!(outcome.event.fields, theirs);
+    assert!(outcome.conflicts.is_empty());
+    assert_eq!(
+        outcome.refused,
+        [Refused {
+            field: Field::Attendees,
+            attendee: Some(ME.to_owned()),
+        }]
+    );
 }
 
 #[test]
