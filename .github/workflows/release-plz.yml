@@ -20,6 +20,12 @@ env:
 jobs:
   # Publishes the crates whose version is not on crates.io yet, then tags them and creates their
   # GitHub releases. With `release_always = false` this only acts on a merged release pull request.
+  #
+  # No concurrency group, as in release-plz's documented workflow: a group keeps at most one
+  # pending run and cancels the one before it, so a push queued behind a running release would
+  # cancel the pending run for a just-merged release pull request, and the later run, not being a
+  # release pull request merge, would publish and tag nothing. Overlapping runs are safe, because
+  # `release-plz release` skips every version already on crates.io.
   release:
     name: release
     if: github.repository == 'justin13888/calendar-sync'
@@ -29,9 +35,6 @@ jobs:
       contents: write
       # The OIDC token crates.io trusted publishing exchanges for a short-lived publish token
       id-token: write
-    concurrency:
-      group: release-plz-release
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
