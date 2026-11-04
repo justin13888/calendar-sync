@@ -1,0 +1,85 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic example: a delta round whose second page replays a change from the first, then a removal",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?startDateTime=2026-11-01T00:00:00Z&endDateTime=2026-12-01T00:00:00Z",
+        "headers": {
+          "prefer": "odata.maxpagesize=1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$skiptoken=R0usmcCM996atia_s",
+            "value": [
+              {
+                "id": "AAMkAGI2TGuLAAA=",
+                "changeKey": "DwAAABYAAABQ",
+                "subject": "Planning",
+                "organizer": {
+                  "emailAddress": {
+                    "name": "Person One",
+                    "address": "person1@example.com"
+                  }
+                },
+                "start": {
+                  "dateTime": "2026-11-10T14:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-10T15:00:00.0000000",
+                  "timeZone": "UTC"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?$skiptoken=R0usmcCM996atia_s",
+        "headers": {
+          "prefer": "odata.maxpagesize=1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+            "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=R0usmci39OQxqJrxK4",
+            "value": [
+              {
+                "id": "AAMkAGI2TGuLAAA=",
+                "changeKey": "DwAAABYAAABQ",
+                "subject": "Planning"
+              },
+              {
+                "@removed": {
+                  "reason": "deleted"
+                },
+                "id": "AAMkAGI2TGuMAAA="
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

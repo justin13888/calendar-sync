@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "provider": "caldav",
+  "description": "Synthetic example: a truncated sync-collection report (507), its continuation, then a PUT that fails If-Match",
+  "exchanges": [
+    {
+      "request": {
+        "method": "REPORT",
+        "url": "/dav/calendars/user/default/",
+        "headers": {
+          "content-type": "application/xml; charset=utf-8",
+          "depth": "0"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:sync-collection xmlns:D=\"DAV:\">\n  <D:sync-token/>\n  <D:sync-level>1</D:sync-level>\n  <D:limit><D:nresults>1</D:nresults></D:limit>\n  <D:prop><D:getetag/></D:prop>\n</D:sync-collection>\n"
+        }
+      },
+      "response": {
+        "status": 207,
+        "headers": {
+          "content-type": "application/xml; charset=utf-8"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n  <D:response>\n    <D:href>/dav/calendars/user/default/a.ics</D:href>\n    <D:propstat>\n      <D:prop><D:getetag>\"1\"</D:getetag></D:prop>\n      <D:status>HTTP/1.1 200 OK</D:status>\n    </D:propstat>\n  </D:response>\n  <D:response>\n    <D:href>/dav/calendars/user/default/</D:href>\n    <D:status>HTTP/1.1 507 Insufficient Storage</D:status>\n    <D:error><D:number-of-matches-within-limits/></D:error>\n  </D:response>\n  <D:sync-token>http://example.com/sync/1</D:sync-token>\n</D:multistatus>\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "REPORT",
+        "url": "/dav/calendars/user/default/",
+        "headers": {
+          "content-type": "application/xml; charset=utf-8",
+          "depth": "0"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:sync-collection xmlns:D=\"DAV:\">\n  <D:sync-token>http://example.com/sync/1</D:sync-token>\n  <D:sync-level>1</D:sync-level>\n  <D:prop><D:getetag/></D:prop>\n</D:sync-collection>\n"
+        }
+      },
+      "response": {
+        "status": 207,
+        "headers": {
+          "content-type": "application/xml; charset=utf-8"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n  <D:response>\n    <D:href>/dav/calendars/user/default/b.ics</D:href>\n    <D:propstat>\n      <D:prop><D:getetag>\"2\"</D:getetag></D:prop>\n      <D:status>HTTP/1.1 200 OK</D:status>\n    </D:propstat>\n  </D:response>\n  <D:sync-token>http://example.com/sync/2</D:sync-token>\n</D:multistatus>\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "/dav/calendars/user/default/a.ics",
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8",
+          "if-match": "\"1\""
+        },
+        "body": {
+          "kind": "text",
+          "content": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//testkit//EN\r\nBEGIN:VEVENT\r\nUID:a@example.com\r\nDTSTAMP:20261104T120000Z\r\nDTSTART:20261110T140000Z\r\nDTEND:20261110T150000Z\r\nSUMMARY:Planning\r\nORGANIZER:mailto:person1@example.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        }
+      },
+      "response": {
+        "status": 412
+      }
+    }
+  ]
+}
