@@ -25,6 +25,13 @@ calendar-sync-google = { path = "crates/calendar-sync-google", version = "0.1.0"
 calendar-sync-graph = { path = "crates/calendar-sync-graph", version = "0.1.0" }
 calendar-sync-caldav = { path = "crates/calendar-sync-caldav", version = "0.1.0" }
 calendar-sync-testkit = { path = "crates/calendar-sync-testkit", version = "0.1.0" }
+# Third-party. `jiff` is the only date and time library. Its default features read the system
+# time zone, so a crate turns on only the features it needs.
+jiff = { version = "0.2.39", default-features = false, features = ["std"] }
+serde = { version = "1.0.229", features = ["derive"] }
+# Test-only.
+proptest = "1.12.0"
+serde_json = "1.0.154"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

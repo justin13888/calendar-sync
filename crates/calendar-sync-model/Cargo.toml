@@ -15,5 +15,13 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 # Unpublished until this crate's release issue.
 publish = false
 
+[dependencies]
+jiff = { workspace = true, features = ["serde"] }
+serde.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true
