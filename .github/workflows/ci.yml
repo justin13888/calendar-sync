@@ -225,7 +225,12 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: cog verify "$PR_TITLE"
+        # `cog verify` reads `user.name` from the global git config and aborts
+        # without one; the runner has none, so give its throwaway home one.
+        run: |
+          git config --global user.name "ci"
+          git config --global user.email "ci@localhost"
+          cog verify "$PR_TITLE"
       - name: Every commit on the branch follows cog.toml
         if: github.event_name != 'pull_request'
         run: mise run commits:check
