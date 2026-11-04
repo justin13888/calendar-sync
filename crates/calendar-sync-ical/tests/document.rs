@@ -711,3 +711,17 @@ fn an_override_cannot_carry_its_own_recurrence() {
     assert_eq!(losses[0].field, Field::Recurrence);
     assert_eq!(text(&document), SERIES);
 }
+
+#[test]
+fn control_characters_in_text_are_reported() {
+    let mut document = IcalDocument::parse(SERIES.as_bytes());
+    let mut series = read_one(&document).series;
+    series.master.as_mut().unwrap().fields.title = Some("bell\u{7} and\r\nbreak".to_owned());
+    let losses = document.write(&series, stamp()).unwrap();
+    assert_eq!(losses.len(), 1, "{losses:#?}");
+    assert_eq!(
+        (losses[0].field.clone(), losses[0].reason),
+        (Field::Title, LossReason::Approximated)
+    );
+    assert!(text(&document).contains("summary:bell and\\nbreak\r\n"));
+}

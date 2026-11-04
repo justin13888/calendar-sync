@@ -39,6 +39,23 @@ impl<'z> Writer<'z> {
         }
     }
 
+    /// Reports the control characters a text value loses: RFC 5545 section 3.3.11 allows none
+    /// but tab and the line break written as `\n`, so a carriage return becomes a line break and
+    /// any other control character is dropped.
+    pub(crate) fn text_loss(&mut self, field: Field, value: Option<&str>) {
+        if value.is_some_and(|value| {
+            value
+                .chars()
+                .any(|c| c.is_control() && !matches!(c, '\t' | '\n'))
+        }) {
+            self.losses.push(Loss::new(
+                field,
+                LossReason::Approximated,
+                "control characters iCalendar text cannot hold are dropped or written as line breaks",
+            ));
+        }
+    }
+
     /// The `VALUE` and `TZID` parameters and the value of a `DATE` or `DATE-TIME` property.
     pub(crate) fn time(
         &mut self,
@@ -104,14 +121,17 @@ pub(crate) fn apply(
     writer: &mut Writer<'_>,
 ) {
     if old.title != new.title {
+        writer.text_loss(Field::Title, new.title.as_deref());
         let value = new.title.as_deref().map(line::escape_text);
         line::set_single(component, "SUMMARY", &[], value.as_deref());
     }
     if old.location != new.location {
+        writer.text_loss(Field::Location, new.location.as_deref());
         let value = new.location.as_deref().map(line::escape_text);
         line::set_single(component, "LOCATION", &[("ALTREP", None)], value.as_deref());
     }
     if old.description != new.description {
+        writer.text_loss(Field::Description, new.description.as_deref());
         let value = new.description.as_deref().map(line::escape_text);
         line::set_single(
             component,
@@ -341,34 +361,38 @@ fn attendee_params(
     ]
 }
 
-/// Rewrites the `ATTENDEE` lines: an attendee kept is matched to its line by address, and only a
-/// changed one is rewritten, keeping the parameters the model does not map.
+/// Rewrites the `ATTENDEE` lines in the model's order: an attendee kept is matched to its line by
+/// address and keeps that line's bytes, a changed one is rewritten keeping the parameters the
+/// model does not map, and a new one gets a new line.
+///
+/// The lines fill the positions the `ATTENDEE` lines held, in order, so where only one attendee
+/// changes, only its line does. Lines beyond those positions follow the last of them, and
+/// positions left over are removed.
 fn attendees(component: &mut IcalCst<'static>, new: &[Attendee]) {
     let mut scratch = Vec::new();
-    let existing: Vec<(usize, Attendee)> = line::positions(component, "ATTENDEE")
-        .into_iter()
-        .filter_map(|at| match &component.items[at] {
-            IcalItem::Prop(old) => Some((at, read::attendee(old, &mut scratch))),
+    let slots = line::positions(component, "ATTENDEE");
+    let existing: Vec<(ical::tree::line::IcalLine<'static>, Attendee)> = slots
+        .iter()
+        .filter_map(|&at| match &component.items[at] {
+            IcalItem::Prop(old) => Some((old.clone(), read::attendee(old, &mut scratch))),
             _ => None,
         })
         .collect();
     let mut used = vec![false; existing.len()];
-    let mut added = Vec::new();
+    let mut lines = Vec::with_capacity(new.len());
     for attendee in new {
         let matched = existing.iter().enumerate().position(|(index, (_, old))| {
             !used[index] && old.address.eq_ignore_ascii_case(&attendee.address)
         });
         let value = address_value(&attendee.address);
-        match matched {
+        lines.push(match matched {
             Some(index) => {
                 used[index] = true;
-                let (at, old) = &existing[index];
-                if old != attendee
-                    && let IcalItem::Prop(old_line) = &component.items[*at]
-                {
-                    let params = attendee_params(attendee, Some(old_line));
-                    let rewritten = line::rewrite(old_line, &params, &value);
-                    component.items[*at] = IcalItem::Prop(rewritten);
+                let (old_line, old) = &existing[index];
+                if old == attendee {
+                    old_line.clone()
+                } else {
+                    line::rewrite(old_line, &attendee_params(attendee, Some(old_line)), &value)
                 }
             }
             None => {
@@ -376,17 +400,31 @@ fn attendees(component: &mut IcalCst<'static>, new: &[Attendee]) {
                     .into_iter()
                     .filter_map(|(name, value)| value.map(|value| (name, value)))
                     .collect();
-                added.push(line::build("ATTENDEE", &params, &value));
+                line::build("ATTENDEE", &params, &value)
             }
+        });
+    }
+    let mut lines = lines.into_iter();
+    for &at in &slots {
+        match lines.next() {
+            Some(line) => component.items[at] = IcalItem::Prop(line),
+            None => break,
         }
     }
-    for (index, (at, _)) in existing.iter().enumerate().rev() {
-        if !used[index] {
-            component.items.remove(*at);
+    let extra: Vec<_> = lines.collect();
+    if let Some(&last) = slots.last() {
+        for (offset, line) in extra.into_iter().enumerate() {
+            component
+                .items
+                .insert(last + 1 + offset, IcalItem::Prop(line));
+        }
+    } else {
+        for line in extra {
+            component.push_line(line);
         }
     }
-    for line in added {
-        component.push_line(line);
+    for &at in slots.iter().skip(new.len()).rev() {
+        component.items.remove(at);
     }
 }
 
