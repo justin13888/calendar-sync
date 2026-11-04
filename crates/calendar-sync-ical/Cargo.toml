@@ -15,5 +15,17 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 # Unpublished until this crate's release issue.
 publish = false
 
+[dependencies]
+calendar-sync-model.workspace = true
+# docs/adr/0001-icalendar-crate.md: pinned exactly, and no `ical` type appears in this crate's
+# public API, so an upgrade stays inside this crate. `parser` is the byte-faithful syntax tree;
+# `tzdb` writes the `VTIMEZONE` a new `TZID` needs.
+ical-rs = { version = "=0.7.0", default-features = false, features = ["parser", "tzdb"] }
+# `tzdb-bundle-always` compiles in the IANA database that `zone::lookup` reads, never a file.
+jiff = { workspace = true, features = ["tzdb-bundle-always"] }
+
+[dev-dependencies]
+proptest.workspace = true
+
 [lints]
 workspace = true
