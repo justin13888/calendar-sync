@@ -308,7 +308,8 @@ impl Fixture {
 
     /// Remove or replace everything [`Self::audit`] flags. Credential headers are removed,
     /// credential parameters, fields and values become [`REDACTED`], and each email address
-    /// becomes `personN@example.com`, the same address always the same replacement.
+    /// becomes `personN@example.com`, the same address always the same replacement. A URL's
+    /// `%40` is decoded to `@` first, so an encoded address is found too.
     pub fn redact(&mut self) {
         let mut redactor = Redactor::default();
         for exchange in &mut self.exchanges {
