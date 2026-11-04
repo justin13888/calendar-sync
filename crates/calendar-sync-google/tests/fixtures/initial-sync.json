@@ -17,7 +17,7 @@
           "kind": "json",
           "content": {
             "kind": "calendar#events",
-            "etag": "\"p33c9vj5ue6you0g\"",
+            "etag": "\"p33c9vj5k16q0g\"",
             "summary": "Synthetic text 1",
             "updated": "2026-11-04T12:00:00.000Z",
             "timeZone": "America/Toronto",
@@ -115,7 +115,7 @@
           "kind": "json",
           "content": {
             "kind": "calendar#events",
-            "etag": "\"p33c9vj5ue6you0g\"",
+            "etag": "\"p33c9vj5k16q0g\"",
             "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAU=",
             "items": [
               {
