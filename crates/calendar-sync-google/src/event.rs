@@ -391,13 +391,18 @@ pub fn write(event: &ProviderEvent) -> WrittenEvent {
         .end()
         .cloned()
         .unwrap_or_else(|| time::implied_end(start, &mut losses));
+    let write_time = if fields.recurrence.is_some() {
+        time::write_recurring
+    } else {
+        time::write
+    };
     body.insert(
         "start".to_owned(),
-        time::write(start, Field::Times, &mut losses),
+        write_time(start, Field::Times, &mut losses),
     );
     body.insert(
         "end".to_owned(),
-        time::write(&end, Field::Times, &mut losses),
+        write_time(&end, Field::Times, &mut losses),
     );
     match &fields.recurrence {
         Some(rule) => {

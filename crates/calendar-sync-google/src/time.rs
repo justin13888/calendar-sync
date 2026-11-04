@@ -88,6 +88,23 @@ pub(crate) fn write(time: &TimeValue, what: Field, losses: &mut Vec<Loss>) -> Va
     }
 }
 
+/// Writes one `EventDateTime` of a recurring event. Google requires `timeZone` there, because it
+/// names the zone the rule is expanded in, so an instant is written with `timeZone` `UTC` and
+/// reported: it reads back as a time in `UTC`, not as an instant.
+pub(crate) fn write_recurring(time: &TimeValue, what: Field, losses: &mut Vec<Loss>) -> Value {
+    match time {
+        TimeValue::Instant { timestamp } => {
+            losses.push(Loss::new(
+                what,
+                LossReason::Approximated,
+                "Google needs a zone for a recurring event; the instant is written in UTC",
+            ));
+            json!({ "dateTime": timestamp.to_string(), "timeZone": "UTC" })
+        }
+        other => write(other, what, losses),
+    }
+}
+
 /// The end Google needs for an event the model gives no end: the start itself for a timed event,
 /// and the next day for an all-day one.
 pub(crate) fn implied_end(start: &TimeValue, losses: &mut Vec<Loss>) -> TimeValue {

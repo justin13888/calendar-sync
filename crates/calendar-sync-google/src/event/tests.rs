@@ -275,3 +275,35 @@ fn a_recurring_master_writes_its_rule() {
     let body = Value::Object(write(&event).body);
     assert_eq!(body["recurrence"], json!(["RRULE:FREQ=WEEKLY;BYDAY=TU,TH"]));
 }
+
+#[test]
+fn a_recurring_instant_is_written_with_a_zone() {
+    let original = json!({
+        "id": "series2",
+        "etag": "\"1\"",
+        "start": { "dateTime": "2026-11-03T15:00:00Z" },
+        "end": { "dateTime": "2026-11-03T15:15:00Z" },
+        "recurrence": ["RRULE:FREQ=DAILY;COUNT=3"]
+    });
+    let event = event(&original);
+    assert!(matches!(
+        event.fields.times.start(),
+        TimeValue::Instant { .. }
+    ));
+    let written = write(&event);
+    assert_eq!(written.losses.len(), 2, "{:?}", written.losses);
+    let body = Value::Object(written.body);
+    assert_eq!(
+        body["start"],
+        json!({ "dateTime": "2026-11-03T15:00:00Z", "timeZone": "UTC" })
+    );
+    assert_eq!(
+        body["end"],
+        json!({ "dateTime": "2026-11-03T15:15:00Z", "timeZone": "UTC" })
+    );
+
+    let mut single = event;
+    single.fields.recurrence = None;
+    let body = Value::Object(write(&single).body);
+    assert_eq!(body["start"], json!({ "dateTime": "2026-11-03T15:00:00Z" }));
+}

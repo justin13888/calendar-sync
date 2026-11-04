@@ -44,7 +44,7 @@
 //! |---|---|
 //! | `id`, `iCalUID`, `recurringEventId`, `etag` | `ids.id`, `ids.ical_uid`, `ids.series_id`, `revision` |
 //! | `summary`, `description`, `location` | `title`, `description`, `location` |
-//! | `start`, `end` | `times`. `date` is all-day; `dateTime` with `timeZone` is zoned, in that zone; `dateTime` alone is an instant |
+//! | `start`, `end` | `times`. `date` is all-day; `dateTime` with `timeZone` is zoned, in that zone; `dateTime` alone is an instant. A recurring event's instant is written with `timeZone` `UTC`, which Google requires |
 //! | `recurrence` | `recurrence`, read and written as iCalendar by `calendar-sync-ical` |
 //! | `status`, `transparency`, `visibility` | `status`, `transparency`, `visibility` |
 //! | `organizer` `email`, `displayName` | `organizer` |
