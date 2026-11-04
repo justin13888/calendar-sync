@@ -12,7 +12,10 @@ updates:
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps)
-    # Semver-compatible updates arrive as one pull request; each breaking update gets its own.
+    # Minor and patch updates arrive as one pull request; each major update gets its own. Under
+    # Cargo semver a minor bump of a 0.x crate (0.4 -> 0.5) is breaking, yet Dependabot still
+    # calls it minor, so it lands in this group too. CI on the group pull request catches the
+    # break; to split one out, add it to an `exclude-patterns` list here.
     groups:
       cargo:
         update-types: [minor, patch]
