@@ -519,7 +519,7 @@ fn audit_json(value: &Value, path: &str, push: &mut impl FnMut(String, FindingKi
 
 fn audit_text(text: &str, path: &str, push: &mut impl FnMut(String, FindingKind)) {
     let view = View::unfolded(text);
-    for (name, _, _) in read_both(text, &view, parameter_spans) {
+    for (name, _, _) in read_both(text, &view, parameters) {
         push(format!("{path}?{name}"), FindingKind::CredentialParameter);
     }
     if !read_both(text, &view, credentials).is_empty() {
@@ -595,15 +595,28 @@ fn credentials(text: &str) -> Vec<((), usize, usize)> {
         .collect()
 }
 
+/// [`parameter_spans`] in the shape [`read_both`] takes: the names are owned, as `read_both`
+/// also reads text it builds itself.
+fn parameters(text: &str) -> Vec<(String, usize, usize)> {
+    parameter_spans(text)
+        .into_iter()
+        .map(|(name, start, end)| (name.to_owned(), start, end))
+        .collect()
+}
+
 /// What `detect` finds in `original`, read both through `view` and as written, as byte ranges
 /// of `original`. A fold that `view` removes can split a value, which only `view` sees whole,
 /// or can be the only thing between a word and the value after it (`foo\r\n client_secret=x`
 /// unfolds to `fooclient_secret=x`), which only `original` sees apart. A finding of `original`
 /// that overlaps one of `view` is the same finding and is dropped.
-fn read_both<'t, T>(
-    original: &'t str,
-    view: &'t View,
-    detect: impl Fn(&'t str) -> Vec<(T, usize, usize)>,
+///
+/// A finding of `original` alone ends at the first fold inside its value, since a fold's line
+/// break ends a value as written. Its range is extended to where the value ends once the text
+/// from its start on is unfolded, so the continuation after the fold is part of it.
+fn read_both<T>(
+    original: &str,
+    view: &View,
+    detect: impl Fn(&str) -> Vec<(T, usize, usize)>,
 ) -> Vec<(T, usize, usize)> {
     let mut found: Vec<(T, usize, usize)> = detect(&view.text)
         .into_iter()
@@ -613,9 +626,20 @@ fn read_both<'t, T>(
         })
         .collect();
     for (item, start, end) in detect(original) {
-        if !found.iter().any(|(_, s, e)| start < *e && *s < end) {
-            found.push((item, start, end));
+        if found.iter().any(|(_, s, e)| start < *e && *s < end) {
+            continue;
         }
+        let end = if View::fold_at(original, end) {
+            // The text before `start` stays as written, so the finding starts where it did.
+            let rest = View::unfolded_from(original, start);
+            detect(&rest.text)
+                .into_iter()
+                .find(|(_, s, _)| *s == start)
+                .map_or(end, |(_, s, e)| rest.original(s, e).1.max(end))
+        } else {
+            end
+        };
+        found.push((item, start, end));
     }
     found
 }
@@ -664,15 +688,16 @@ impl View {
     /// `text` with its iCalendar line folds (RFC 5545 section 3.1) removed: a line break, `CRLF`
     /// or a bare `LF`, followed by one space or tab.
     fn unfolded(text: &str) -> Self {
-        let bytes = text.as_bytes();
+        Self::unfolded_from(text, 0)
+    }
+
+    /// `text` with its line folds from byte `from` on removed, and kept before it.
+    fn unfolded_from(text: &str, from: usize) -> Self {
         let mut view = Self::with_capacity(text.len());
-        let (mut kept, mut index) = (0, 0);
-        while index < bytes.len() {
-            let fold = match bytes[index..] {
-                [b'\r', b'\n', b' ' | b'\t', ..] => 3,
-                [b'\n', b' ' | b'\t', ..] => 2,
-                _ => 0,
-            };
+        view.keep(text, 0, from);
+        let (mut kept, mut index) = (from, from);
+        while index < text.len() {
+            let fold = Self::fold_length(text, index);
             if fold == 0 {
                 index += 1;
             } else {
@@ -683,6 +708,21 @@ impl View {
         }
         view.keep(text, kept, text.len());
         view
+    }
+
+    /// The length of the line fold at byte `index` of `text`: a line break, `CRLF` or a bare
+    /// `LF`, followed by one space or tab. Zero where no fold starts there.
+    fn fold_length(text: &str, index: usize) -> usize {
+        match text.as_bytes()[index..] {
+            [b'\r', b'\n', b' ' | b'\t', ..] => 3,
+            [b'\n', b' ' | b'\t', ..] => 2,
+            _ => 0,
+        }
+    }
+
+    /// Whether a line fold starts at byte `index` of `text`.
+    fn fold_at(text: &str, index: usize) -> bool {
+        Self::fold_length(text, index) > 0
     }
 
     /// `url` with each `%40` decoded to `@`, so an encoded email address is found.
@@ -796,7 +836,7 @@ impl Redactor {
             .into_iter()
             .map(|((), start, end)| (start, end))
             .chain(
-                read_both(original, view, parameter_spans)
+                read_both(original, view, parameters)
                     .into_iter()
                     .map(|(_, start, end)| (start, end)),
             )
@@ -1070,6 +1110,40 @@ mod tests {
             fixture.exchanges[0].request.body,
             Body::Text("foo\n client_secret=REDACTED\r\nbar\r\n REDACTED".to_owned())
         );
+    }
+
+    #[test]
+    fn a_value_only_the_original_finds_continues_across_its_folds() {
+        // Each value is found only as written, and is folded: the tail after each fold is
+        // part of it.
+        let text = "foo\n client_secret=GOCSPX-abc\n def\r\nbar\r\n ya29.a0Af\r\n H6SMBx tail";
+        let mut fixture = Fixture {
+            format: 1,
+            provider: Provider::CalDav,
+            description: String::new(),
+            exchanges: vec![Exchange {
+                request: Request {
+                    method: "PUT".to_owned(),
+                    url: "/cal/a.ics".to_owned(),
+                    headers: [].into(),
+                    body: Body::Text(text.to_owned()),
+                },
+                response: Response {
+                    status: 204,
+                    headers: [].into(),
+                    body: Body::Empty,
+                },
+            }],
+        };
+        assert_eq!(fixture.audit().len(), 2, "{:?}", fixture.audit());
+
+        fixture.redact();
+        assert_eq!(fixture.audit(), []);
+        assert_eq!(
+            fixture.exchanges[0].request.body,
+            Body::Text("foo\n client_secret=REDACTED\r\nbar\r\n REDACTED tail".to_owned())
+        );
+        assert!(Fixture::from_json(&fixture.to_json().unwrap()).is_ok());
     }
 
     #[test]
