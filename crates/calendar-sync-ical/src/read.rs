@@ -16,7 +16,7 @@ use jiff::tz::TimeZone;
 
 use crate::line;
 use crate::value::{self, Duration};
-use crate::zone::Zones;
+use crate::zone::{self, Zones};
 
 /// One `VEVENT`, read.
 #[derive(Debug)]
@@ -266,14 +266,14 @@ fn end_after(start: &TimeValue, duration: Duration) -> Option<TimeValue> {
             time_zone,
         } => {
             let span = duration.span()?;
-            let end = match TimeZone::get(time_zone.as_str()) {
-                Ok(zone) => date_time
+            let end = match zone::lookup(time_zone.as_str()) {
+                Some(zone) => date_time
                     .to_zoned(zone)
                     .ok()?
                     .checked_add(span)
                     .ok()?
                     .datetime(),
-                Err(_) => date_time.checked_add(span).ok()?,
+                None => date_time.checked_add(span).ok()?,
             };
             Some(TimeValue::zoned(end, time_zone.clone()))
         }

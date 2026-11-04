@@ -83,9 +83,11 @@ pub(crate) fn format_utc_or_local(
         TimeValue::Zoned {
             date_time,
             time_zone,
-        } => match TimeZone::get(time_zone.as_str()).and_then(|zone| date_time.to_zoned(zone)) {
-            Ok(zoned) => format_instant(zoned.timestamp()),
-            Err(_) => {
+        } => match crate::zone::lookup(time_zone.as_str())
+            .and_then(|zone| date_time.to_zoned(zone).ok())
+        {
+            Some(zoned) => format_instant(zoned.timestamp()),
+            None => {
                 losses.push(Loss::new(
                     field.clone(),
                     LossReason::Approximated,

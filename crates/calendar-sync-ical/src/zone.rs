@@ -1,12 +1,15 @@
 //! Time zones: resolving a `TZID` to an IANA name, and the `VTIMEZONE` a written `TZID` needs.
 //!
-//! Zones come from the IANA database `jiff` bundles (through `ical`'s `tzdb` feature), which is
-//! compiled in: no file, environment or system zone is read.
+//! Zones come from the IANA database `jiff` bundles, which is compiled in. Lookups go to that
+//! database directly, never to jiff's global one: once any crate in a build enables jiff's
+//! `tzdb-zoneinfo` feature, the global database reads `TZDIR` and `/usr/share/zoneinfo` first.
+//! The one exception is `ical`'s `VTIMEZONE` synthesis, see [`vtimezone`].
 
 use std::collections::BTreeMap;
 
 use calendar_sync_model::TimeZoneId;
 use ical::tree::cst::{IcalCst, IcalItem};
+use jiff::tz::{TimeZone, TimeZoneDatabase};
 
 use crate::line;
 
@@ -62,9 +65,14 @@ impl Zones {
     }
 }
 
+/// The IANA zone `name`, from the bundled database only.
+pub(crate) fn lookup(name: &str) -> Option<TimeZone> {
+    TimeZoneDatabase::bundled().get(name).ok()
+}
+
 /// Whether the bundled database knows `name`.
 pub(crate) fn known(name: &str) -> bool {
-    !name.is_empty() && ical::tzdb::is_known(name)
+    !name.is_empty() && lookup(name).is_some()
 }
 
 /// Whether `calendar` has a `VTIMEZONE` whose `TZID` is `tzid`.
@@ -79,6 +87,9 @@ pub(crate) fn defines(calendar: &IcalCst<'_>, tzid: &str) -> bool {
 }
 
 /// The `VTIMEZONE` for the IANA zone `tzid`, describing the era around `anchor` (Unix seconds).
+///
+/// `ical` looks `tzid` up in jiff's global database, which is the bundled one unless some crate
+/// in the build enables jiff's `tzdb-zoneinfo` feature. No crate in this workspace does.
 pub(crate) fn vtimezone(tzid: &str, anchor: i64) -> Option<IcalCst<'static>> {
     ical::tzdb::vtimezone(tzid, anchor)
 }

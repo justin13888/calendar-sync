@@ -19,10 +19,10 @@ publish = false
 calendar-sync-model.workspace = true
 # docs/adr/0001-icalendar-crate.md: pinned exactly, and no `ical` type appears in this crate's
 # public API, so an upgrade stays inside this crate. `parser` is the byte-faithful syntax tree;
-# `tzdb` bundles the IANA database (through jiff, read from no file) that resolves a `TZID` and
-# writes the `VTIMEZONE` a new `TZID` needs.
+# `tzdb` writes the `VTIMEZONE` a new `TZID` needs.
 ical-rs = { version = "=0.7.0", default-features = false, features = ["parser", "tzdb"] }
-jiff.workspace = true
+# `tzdb-bundle-always` compiles in the IANA database that `zone::lookup` reads, never a file.
+jiff = { workspace = true, features = ["tzdb-bundle-always"] }
 
 [dev-dependencies]
 proptest.workspace = true
