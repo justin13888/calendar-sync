@@ -24,9 +24,24 @@
 //! whole), and as JSON text for `CalDAV`. A body that does not decode is
 //! [`Failure::Rejected`]. Every event the seams produce carries [`MAPPER_VERSION`].
 //!
-//! [`GraphSeam`] creates through `POST`, which is not idempotent in the fake: a create whose
-//! response is lost and that the engine repeats makes a second event. Graph's `transactionId`,
-//! which a real seam sends to prevent that, is not modelled.
+//! [`GraphSeam`] creates through `POST`, which Graph makes idempotent only through
+//! `transactionId`. It sends the create's [`ResourceId`], the idempotency key
+//! [`DerivedIds`](calendar_sync_engine::DerivedIds) derives from the edit, as the
+//! `transactionId`, and stores it in the extended property [`KEY_PROPERTY`], which
+//! [`Request::Lookup`] filters on. The engine looks the key up before every create, so a create
+//! is repeated only when nothing was made under it; the `transactionId` covers what the lookup
+//! cannot, two attempts in flight at once.
+//!
+//! # Duplicate risk
+//!
+//! What a create repeated by the engine (after a lost response, a restart, or on another device)
+//! can still do, per provider, as `tests/queue.rs` in the engine asserts against these fakes:
+//!
+//! | Provider | Repeated create | Create repeated after the event was deleted |
+//! |---|---|---|
+//! | Google | Refused: the id is in use | Refused: a deleted event keeps its id |
+//! | Graph | One event while the `transactionId` is remembered; a duplicate once it is forgotten | A new event |
+//! | `CalDAV` | Refused by `If-None-Match: *` | The event comes back: the href is free again |
 
 use calendar_sync_engine::{
     Change, Cursor, Failure, ListFrom, Next, Outcome, Page, ProviderSeam, Request, ResourceId,
@@ -38,6 +53,9 @@ use serde_json::{Value, json};
 use crate::caldav::{self, FakeCalDav, Member, Precondition, SyncCollection, SyncReport};
 use crate::google::{self, EventStatus, EventsPage, FakeGoogle, ListRequest};
 use crate::graph::{self, DeltaItem, DeltaPage, DeltaRequest, FakeGraph};
+
+/// The id of the Graph single-value extended property that holds a create's idempotency key.
+pub const KEY_PROPERTY: &str = "String {0d9b5b4e-6f5c-4c39-9a51-4c3c5d0e7a21} Name calendarSyncKey";
 
 /// The mapper version of every event the seams produce.
 pub const MAPPER_VERSION: MapperVersion = MapperVersion::new(1);
@@ -220,7 +238,8 @@ impl ProviderSeam for GoogleSeam {
                 }
                 GoogleCall::List(list)
             }
-            Request::Read { resource } => GoogleCall::Get {
+            // The key is the event id, so a lookup is a read.
+            Request::Read { resource } | Request::Lookup { key: resource } => GoogleCall::Get {
                 id: resource.as_str().to_owned(),
             },
             Request::Create { resource, event } => GoogleCall::Insert {
@@ -271,12 +290,13 @@ impl ProviderSeam for GoogleSeam {
             (Request::List { .. }, GoogleResponse::Page(Err(google::Error::Gone))) => {
                 Outcome::Failed(Failure::CursorExpired)
             }
-            (Request::Read { .. }, GoogleResponse::Event(Ok(event))) => {
+            (Request::Read { .. } | Request::Lookup { .. }, GoogleResponse::Event(Ok(event))) => {
                 Self::event(&event).map_or_else(Outcome::Failed, Outcome::Read)
             }
-            (Request::Read { .. }, GoogleResponse::Event(Err(google::Error::NotFound))) => {
-                Outcome::Read(None)
-            }
+            (
+                Request::Read { .. } | Request::Lookup { .. },
+                GoogleResponse::Event(Err(google::Error::NotFound)),
+            ) => Outcome::Read(None),
             (Request::Create { .. } | Request::Update { .. }, GoogleResponse::Event(Ok(event))) => {
                 match Self::event(&event) {
                     Ok(Some(event)) => Outcome::Written(event),
@@ -316,6 +336,15 @@ pub enum GraphCall {
     Create {
         /// The body.
         body: Value,
+        /// `transactionId`.
+        transaction_id: Option<String>,
+    },
+    /// `GET /me/events?$filter=` on one single-value extended property.
+    Find {
+        /// The property's id.
+        property: String,
+        /// The value to match.
+        value: String,
     },
     /// `PATCH /me/events/{id}`.
     Patch {
@@ -342,6 +371,8 @@ pub enum GraphResponse {
     Page(Result<DeltaPage, graph::Error>),
     /// To a get, create or patch.
     Event(Result<graph::Event, graph::Error>),
+    /// To a find.
+    Found(Result<Vec<graph::Event>, graph::Error>),
     /// To a delete.
     Deleted(Result<(), graph::Error>),
 }
@@ -352,7 +383,13 @@ impl FakeGraph {
         match call {
             GraphCall::Delta(request) => GraphResponse::Page(self.delta(&request)),
             GraphCall::Get { id } => GraphResponse::Event(self.get(&id)),
-            GraphCall::Create { body } => GraphResponse::Event(self.create(body)),
+            GraphCall::Create {
+                body,
+                transaction_id,
+            } => GraphResponse::Event(self.create_with(body, transaction_id.as_deref())),
+            GraphCall::Find { property, value } => {
+                GraphResponse::Found(self.find(&property, &value))
+            }
             GraphCall::Patch { id, if_match, body } => {
                 GraphResponse::Event(self.patch(&id, if_match.as_deref(), body))
             }
@@ -425,8 +462,20 @@ impl ProviderSeam for GraphSeam {
             Request::Read { resource } => GraphCall::Get {
                 id: resource.as_str().to_owned(),
             },
-            Request::Create { event, .. } => GraphCall::Create {
-                body: Self::body(&event.fields),
+            // The resource is the idempotency key: sent as the `transactionId`, and kept in an
+            // extended property for a later lookup.
+            Request::Create { resource, event } => {
+                let mut body = Self::body(&event.fields);
+                body["singleValueExtendedProperties"] =
+                    json!([{ "id": KEY_PROPERTY, "value": resource.as_str() }]);
+                GraphCall::Create {
+                    body,
+                    transaction_id: Some(resource.as_str().to_owned()),
+                }
+            }
+            Request::Lookup { key } => GraphCall::Find {
+                property: KEY_PROPERTY.to_owned(),
+                value: key.as_str().to_owned(),
             },
             Request::Update {
                 resource, event, ..
@@ -473,6 +522,11 @@ impl ProviderSeam for GraphSeam {
             (Request::Read { .. }, GraphResponse::Event(Err(graph::Error::NotFound))) => {
                 Outcome::Read(None)
             }
+            (Request::Lookup { .. }, GraphResponse::Found(Ok(events))) => events
+                .first()
+                .map(Self::event)
+                .transpose()
+                .map_or_else(Outcome::Failed, Outcome::Read),
             (Request::Create { .. } | Request::Update { .. }, GraphResponse::Event(Ok(event))) => {
                 Self::event(&event).map_or_else(Outcome::Failed, Outcome::Written)
             }
@@ -481,6 +535,7 @@ impl ProviderSeam for GraphSeam {
                 _,
                 GraphResponse::Page(Err(error))
                 | GraphResponse::Event(Err(error))
+                | GraphResponse::Found(Err(error))
                 | GraphResponse::Deleted(Err(error)),
             ) => Outcome::Failed(Self::failure(error)),
             _ => mismatched(),
@@ -600,7 +655,8 @@ impl ProviderSeam for CalDavSeam {
                 },
                 limit: self.limit,
             }),
-            Request::Read { resource } => CalDavCall::Get {
+            // The key is the href, so a lookup is a read.
+            Request::Read { resource } | Request::Lookup { key: resource } => CalDavCall::Get {
                 href: resource.as_str().to_owned(),
             },
             Request::Create { resource, event } => CalDavCall::Put {
@@ -647,7 +703,7 @@ impl ProviderSeam for CalDavSeam {
                 };
                 listed(Ok(changes), Some(next))
             }
-            (Request::Read { .. }, CalDavResponse::Member(Ok(member))) => {
+            (Request::Read { .. } | Request::Lookup { .. }, CalDavResponse::Member(Ok(member))) => {
                 let body = serde_json::from_str(&member.body).unwrap_or(Value::Null);
                 match decode(&body) {
                     Ok(fields) => Outcome::Read(Some(provider_event(
@@ -659,9 +715,10 @@ impl ProviderSeam for CalDavSeam {
                     Err(failure) => Outcome::Failed(failure),
                 }
             }
-            (Request::Read { .. }, CalDavResponse::Member(Err(caldav::Error::NotFound))) => {
-                Outcome::Read(None)
-            }
+            (
+                Request::Read { .. } | Request::Lookup { .. },
+                CalDavResponse::Member(Err(caldav::Error::NotFound)),
+            ) => Outcome::Read(None),
             (
                 Request::Create {
                     resource, event, ..

@@ -5,8 +5,8 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use calendar_sync_engine::{
-    Edit, EditId, Effect, Input, ListFrom, Next, Notice, Operation, Outcome, Page, Request,
-    RequestId, ResourceId, Role, SyncState,
+    DerivedIds, Edit, EditId, Effect, Input, ListFrom, Next, Notice, Operation, Outcome, Page,
+    Request, RequestId, ResourceId, Role, SyncState,
 };
 use calendar_sync_model::{
     EventTimes, NormalizedEvent, Passthrough, Provider, ProviderEvent, ProviderIds, TimeValue,
@@ -41,10 +41,13 @@ fn fields(title: &str) -> NormalizedEvent {
 /// A fake behind its seam.
 trait Remote {
     const PROVIDER: Provider;
-    /// Whether a create the engine repeats after a lost response is idempotent.
-    const IDEMPOTENT_CREATE: bool;
+    /// Whether the provider assigns the ids of created events, so that a create is queued under
+    /// its idempotency key.
+    const ASSIGNS_IDS: bool;
 
     fn new(plan: FaultPlan) -> Self;
+    /// Slot `n` now names `id`, which the provider gave a local create.
+    fn adopt(&mut self, _n: u8, _id: &ResourceId) {}
     fn perform(&mut self, request: &Request) -> Outcome;
     /// The resource id for slot `n`, if it has one.
     fn key(&self, n: u8) -> Option<ResourceId>;
@@ -64,7 +67,7 @@ struct Google {
 
 impl Remote for Google {
     const PROVIDER: Provider = Provider::Google;
-    const IDEMPOTENT_CREATE: bool = true;
+    const ASSIGNS_IDS: bool = false;
 
     fn new(plan: FaultPlan) -> Self {
         Self {
@@ -122,7 +125,7 @@ struct Graph {
 
 impl Remote for Graph {
     const PROVIDER: Provider = Provider::Graph;
-    const IDEMPOTENT_CREATE: bool = false;
+    const ASSIGNS_IDS: bool = true;
 
     fn new(plan: FaultPlan) -> Self {
         Self {
@@ -130,6 +133,10 @@ impl Remote for Graph {
             seam: GraphSeam::new(Some(PAGE)),
             slots: BTreeMap::new(),
         }
+    }
+
+    fn adopt(&mut self, n: u8, id: &ResourceId) {
+        self.slots.insert(n, id.as_str().to_owned());
     }
 
     fn perform(&mut self, request: &Request) -> Outcome {
@@ -188,7 +195,7 @@ struct CalDav {
 
 impl Remote for CalDav {
     const PROVIDER: Provider = Provider::CalDav;
-    const IDEMPOTENT_CREATE: bool = true;
+    const ASSIGNS_IDS: bool = false;
 
     fn new(plan: FaultPlan) -> Self {
         Self {
@@ -260,6 +267,8 @@ struct Harness<R> {
     edits: u64,
     clock: i64,
     performed: usize,
+    /// The slot each create queued under an idempotency key is for, until the provider names it.
+    creating: BTreeMap<ResourceId, u8>,
 }
 
 impl<R: Remote> Harness<R> {
@@ -278,6 +287,7 @@ impl<R: Remote> Harness<R> {
             edits: 0,
             clock: 0,
             performed: 0,
+            creating: BTreeMap::new(),
         }
     }
 
@@ -285,7 +295,14 @@ impl<R: Remote> Harness<R> {
         for effect in self.state.apply(input) {
             match effect {
                 Effect::Request { id, request } => self.queue.push_back((id, request)),
-                Effect::Notify(notice) => self.notices.push(notice),
+                Effect::Notify(notice) => {
+                    if let Notice::Remapped { from, to } = &notice
+                        && let Some(n) = self.creating.remove(from)
+                    {
+                        self.remote.adopt(n, to);
+                    }
+                    self.notices.push(notice);
+                }
             }
         }
         // The state serializes, and reads back the same, after every step.
@@ -377,12 +394,25 @@ impl<R: Remote> Harness<R> {
             }
             Op::RemoteDelete(n) => self.remote.remote_delete(n),
             Op::LocalCreate(n) => {
-                let Some(resource) = self.remote.key(n) else {
-                    return;
-                };
-                if !R::IDEMPOTENT_CREATE || self.state.records().contains_key(&resource) {
+                let held = self
+                    .remote
+                    .key(n)
+                    .is_some_and(|resource| self.state.records().contains_key(&resource));
+                if held {
                     return;
                 }
+                let resource = if R::ASSIGNS_IDS {
+                    // Queued under the key derived from the edit id the next edit gets.
+                    let edit = EditId::new(format!("edit{}", self.edits + 1));
+                    let key = DerivedIds::of(&edit).idempotency_key();
+                    self.creating.insert(key.clone(), n);
+                    key
+                } else {
+                    let Some(resource) = self.remote.key(n) else {
+                        return;
+                    };
+                    resource
+                };
                 let event = ProviderEvent {
                     ids: ProviderIds::new(R::PROVIDER, resource.as_str()),
                     revision: None,

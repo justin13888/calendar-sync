@@ -10,6 +10,8 @@
 //! - [`seam`]: the provider seam. The protocol-neutral [`Request`]s the engine makes, the
 //!   [`Outcome`]s it accepts, and the [`ProviderSeam`] trait a provider crate implements to
 //!   translate both ways.
+//! - [`ids`]: the provider ids a create derives from its [`EditId`], so a retry from any
+//!   device names the same resource.
 //! - [`merge`]: the three-way merge of one event at push time, field by field, with
 //!   organizer and attendee ownership.
 //!
@@ -25,10 +27,12 @@
 //! assert!(state.is_syncing());
 //! ```
 
+pub mod ids;
 pub mod merge;
 pub mod seam;
 pub mod sync;
 
+pub use ids::DerivedIds;
 pub use merge::{Conflict, FieldValue, MergeOutcome, Refused, Role};
 pub use seam::{
     Change, Cursor, Failure, ListFrom, Next, Outcome, Page, ProviderSeam, Request, RequestId,

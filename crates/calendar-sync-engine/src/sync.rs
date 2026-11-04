@@ -27,16 +27,43 @@
 //!
 //! # Writing
 //!
-//! Each [`Edit`] waits in a queue per resource, and the head of each queue is pushed:
+//! Each [`Edit`] waits in a queue per resource, in the order it was made, and the head of each
+//! queue is pushed:
 //!
 //! 1. An update or delete reads the resource first, then plans from that read: an update merges
 //!    its base, its own values and the read record field by field with [`merge`],
 //!    and writes the result only if it differs, conditional on the read revision. A create is
-//!    written at once, and fails if the resource exists.
+//!    written at once, and fails if the resource exists. On a provider that assigns its own ids
+//!    (Graph), a create first looks up its idempotency key with [`Request::Lookup`], and writes
+//!    only if nothing was created under it.
 //! 2. A write that loses a race, or whose response is lost, reads again and plans again. Because
 //!    a plan always starts from a fresh read, repeating one never applies an edit twice.
 //! 3. A permanent failure, a deleted target, or an edit past its `expires_at` ends the edit with
 //!    a [`Notice`], and the next edit for the resource starts.
+//!
+//! A create's ids derive from its [`EditId`] through [`DerivedIds`](crate::DerivedIds), so a
+//! retry from any device names the same resource. Where the provider assigns the id, the create
+//! is queued under its idempotency key; once the provider names the event, the edits queued
+//! behind the create move to that id, an edit that still names the key is redirected to it, and
+//! [`Notice::Remapped`] tells the application. A repeated create keeps the key, so it is looked
+//! up under it rather than sent again.
+//!
+//! # Coalescing
+//!
+//! An edit queued behind another for the same resource, neither of them started, is folded into
+//! it where the pair has one effect, so a run of offline edits costs one write:
+//!
+//! | Waiting | New | Becomes |
+//! |---|---|---|
+//! | update `base -> a` | update `a -> b` | update `base -> b` |
+//! | update | delete | delete |
+//! | create `a` | update `a -> b` | create `b` |
+//! | create | delete | nothing: both end at once |
+//!
+//! Both edits must have the same [`Role`], an attendee's delete is never folded (it is
+//! rejected), and the folded edit expires when the newer one does. Every edit folded in ends
+//! with the same notice as the edit it was folded into, so each edit still ends exactly once.
+//! An update whose base is not the waiting edit's result stays separate.
 //!
 //! Every read and write the engine sees updates the record it names, also mid-pass. One an edit
 //! makes while a listing is still arriving may be older or newer than the listing's snapshot, so
@@ -59,7 +86,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use calendar_sync_model::{NormalizedEvent, ProviderEvent};
+use calendar_sync_model::{NormalizedEvent, Provider, ProviderEvent};
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
@@ -94,7 +121,9 @@ impl EditId {
 pub struct Edit {
     /// The edit's id.
     pub id: EditId,
-    /// The resource it changes, or creates.
+    /// The resource it changes, or creates. A create names the id
+    /// [`DerivedIds`](crate::DerivedIds) derives from its `id`: the Google id, the `CalDAV` href,
+    /// or, where the provider assigns ids, the idempotency key.
     pub resource: ResourceId,
     /// What it does.
     pub operation: Operation,
@@ -205,6 +234,16 @@ pub enum Notice {
         /// The edit.
         edit: EditId,
     },
+    /// A create on a provider that assigns ids was queued under its idempotency key, and the
+    /// provider named the event `to`. Edits waiting behind it moved to `to`, and an edit queued
+    /// later under `from` is redirected while the engine still holds `to`. A repeated create is
+    /// neither moved nor redirected: it keeps the key, and its lookup finds the event.
+    Remapped {
+        /// The idempotency key the create was queued under.
+        from: ResourceId,
+        /// The id the provider gave the event.
+        to: ResourceId,
+    },
 }
 
 /// Why an edit was rejected.
@@ -249,6 +288,10 @@ pub struct SyncState {
     learned_all: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     now: Option<Timestamp>,
+    /// Idempotency keys of creates, to the id the provider gave each event. Kept while the
+    /// engine holds the event, waits to edit it, or has a request about it in flight.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    aliases: BTreeMap<ResourceId, ResourceId>,
 }
 
 /// A listing in progress.
@@ -296,6 +339,9 @@ struct Pending {
     /// again would fail forever.
     #[serde(default, skip_serializing_if = "core::ops::Not::not")]
     collided: bool,
+    /// The later edits folded into this one, oldest first. Each ends with this edit's notice.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    absorbed: Vec<EditId>,
 }
 
 /// What a request in flight is for.
@@ -359,6 +405,7 @@ impl SyncState {
             Input::Resume => self.resume(&mut out),
         }
         self.forget_settled();
+        self.forget_aliases();
         out
     }
 
@@ -749,22 +796,123 @@ impl SyncState {
 
     // Writing.
 
-    fn enqueue(&mut self, edit: Edit, out: &mut Vec<Effect>) {
+    fn enqueue(&mut self, mut edit: Edit, out: &mut Vec<Effect>) {
         if self.expired(&edit) {
             out.push(Effect::Notify(Notice::Expired { edit: edit.id }));
             return;
         }
+        // A create stays under its idempotency key, so that a repeat looks the event up under it
+        // and finds it, instead of sending a create of its own.
+        if !matches!(edit.operation, Operation::Create(_))
+            && let Some(to) = self.aliases.get(&edit.resource)
+        {
+            edit.resource = to.clone();
+        }
         let resource = edit.resource.clone();
         let queue = self.edits.entry(resource.clone()).or_default();
+        // Only an edit behind the head has never been started, so only it may be folded into.
+        if queue.len() >= 2
+            && let Some(waiting) = queue.back_mut()
+        {
+            match coalesce(&waiting.edit, &edit) {
+                Some(Coalesced::Into(operation)) => {
+                    waiting.edit.operation = operation;
+                    waiting.edit.expires_at = edit.expires_at;
+                    waiting.absorbed.push(edit.id);
+                    return;
+                }
+                Some(Coalesced::Cancelled) => {
+                    if let Some(waiting) = queue.pop_back() {
+                        Self::notify(waiting, None, out);
+                    }
+                    out.push(Effect::Notify(Notice::Applied {
+                        edit: edit.id,
+                        conflicts: Vec::new(),
+                        refused: Vec::new(),
+                    }));
+                    return;
+                }
+                None => {}
+            }
+        }
         queue.push_back(Pending {
             edit,
             conflicts: Vec::new(),
             refused: Vec::new(),
             collided: false,
+            absorbed: Vec::new(),
         });
         if queue.len() == 1 {
             self.start_edit(&resource, out);
         }
+    }
+
+    /// Moves the edits waiting behind a create queued under its idempotency key `from` to `to`,
+    /// the id the provider gave the event, and redirects later edits for `from` to it. A repeated
+    /// create stays under the key, where its lookup finds the event.
+    fn remap(&mut self, from: &ResourceId, to: &ResourceId, out: &mut Vec<Effect>) {
+        if from == to {
+            return;
+        }
+        self.aliases.insert(from.clone(), to.clone());
+        out.push(Effect::Notify(Notice::Remapped {
+            from: from.clone(),
+            to: to.clone(),
+        }));
+        let Some(queue) = self.edits.get_mut(from) else {
+            return;
+        };
+        if queue.len() < 2 {
+            return;
+        }
+        let (creates, behind): (Vec<Pending>, Vec<Pending>) = queue
+            .drain(1..)
+            .partition(|pending| matches!(pending.edit.operation, Operation::Create(_)));
+        queue.extend(creates);
+        if behind.is_empty() {
+            return;
+        }
+        let target = self.edits.entry(to.clone()).or_default();
+        let idle = target.is_empty();
+        for mut pending in behind {
+            pending.edit.resource = to.clone();
+            target.push_back(pending);
+        }
+        if idle {
+            self.start_edit(to, out);
+        }
+    }
+
+    /// Drops the aliases of events the engine no longer holds, waits to edit, or asks about.
+    fn forget_aliases(&mut self) {
+        if self.aliases.is_empty() {
+            return;
+        }
+        let asked: BTreeSet<&ResourceId> = self
+            .in_flight
+            .values()
+            .filter_map(|purpose| match purpose {
+                Purpose::List => None,
+                Purpose::PassRead(resource)
+                | Purpose::EditRead(resource)
+                | Purpose::EditWrite(resource)
+                | Purpose::Refresh(resource) => Some(resource),
+            })
+            .collect();
+        let keep: BTreeSet<ResourceId> = self
+            .aliases
+            .values()
+            .filter(|to| {
+                self.records.contains_key(*to)
+                    || self.edits.contains_key(*to)
+                    || asked.contains(to)
+                    || self.pass.as_ref().is_some_and(|pass| {
+                        pass.staged.contains_key(*to) || pass.observed.contains(*to)
+                    })
+            })
+            .cloned()
+            .collect();
+        self.aliases.retain(|_, to| keep.contains(to));
     }
 
     fn expired(&self, edit: &Edit) -> bool {
@@ -780,6 +928,9 @@ impl SyncState {
             return;
         };
         match &head.edit.operation {
+            // Look before creating where the provider names the event, since only the lookup can
+            // tell that an earlier attempt made it.
+            Operation::Create(event) if assigns_ids(event) => self.read_for_edit(resource, out),
             Operation::Create(event) => {
                 let request = Request::Create {
                     resource: resource.clone(),
@@ -788,15 +939,29 @@ impl SyncState {
                 self.request(Purpose::EditWrite(resource.clone()), request, out);
             }
             Operation::Delete if matches!(head.edit.role, Role::Attendee { .. }) => {
-                self.finish(resource, Some(Rejection::NotOwner), out);
+                self.finish(resource, Some(&Rejection::NotOwner), out);
             }
             Operation::Update { .. } | Operation::Delete => self.read_for_edit(resource, out),
         }
     }
 
+    /// Whether the head edit for `resource` is a create queued under its idempotency key, so that
+    /// `resource` is a key to look up rather than an id to read.
+    fn looks_up(&self, resource: &ResourceId) -> bool {
+        self.head(resource).is_some_and(
+            |head| matches!(&head.edit.operation, Operation::Create(event) if assigns_ids(event)),
+        )
+    }
+
     fn read_for_edit(&mut self, resource: &ResourceId, out: &mut Vec<Effect>) {
-        let request = Request::Read {
-            resource: resource.clone(),
+        let request = if self.looks_up(resource) {
+            Request::Lookup {
+                key: resource.clone(),
+            }
+        } else {
+            Request::Read {
+                resource: resource.clone(),
+            }
         };
         self.request(Purpose::EditRead(resource.clone()), request, out);
     }
@@ -819,7 +984,7 @@ impl SyncState {
             }
             other => {
                 if self.head(&resource).is_some() {
-                    self.finish(&resource, Some(Rejection::Provider(describe(&other))), out);
+                    self.finish(&resource, Some(&Rejection::Provider(describe(&other))), out);
                 }
                 return;
             }
@@ -834,19 +999,31 @@ impl SyncState {
             }
             return;
         }
-        self.observe(&resource, theirs.clone());
+        if theirs.is_none() && self.looks_up(&resource) {
+            // A key names no event, so a lookup that finds nothing says nothing about one: there
+            // is nothing to record, and nothing a pass should read again.
+            self.learn(&resource);
+        } else {
+            self.observe(&resource, theirs.clone());
+        }
         let Some(head) = self.head(&resource) else {
             return;
         };
         let (operation, role) = (head.edit.operation.clone(), head.edit.role.clone());
         let collided = head.collided;
         match (&operation, theirs) {
+            // Found under its idempotency key: an earlier attempt made it, whatever has been
+            // done to it since.
+            (Operation::Create(ours), Some(theirs)) if assigns_ids(ours) => {
+                self.remap(&resource, &ResourceId::of(&theirs), out);
+                self.finish(&resource, None, out);
+            }
             (Operation::Create(ours), Some(theirs)) => {
                 let rejection = (theirs.fields != ours.fields).then_some(Rejection::Exists);
-                self.finish(&resource, rejection, out);
+                self.finish(&resource, rejection.as_ref(), out);
             }
             (Operation::Create(_), None) if collided => {
-                self.finish(&resource, Some(Rejection::Exists), out);
+                self.finish(&resource, Some(&Rejection::Exists), out);
             }
             (Operation::Create(ours), None) => {
                 let request = Request::Create {
@@ -855,7 +1032,7 @@ impl SyncState {
                 };
                 self.request(Purpose::EditWrite(resource), request, out);
             }
-            (Operation::Update { .. }, None) => self.finish(&resource, Some(Rejection::Gone), out),
+            (Operation::Update { .. }, None) => self.finish(&resource, Some(&Rejection::Gone), out),
             (Operation::Update { base, ours }, Some(theirs)) => {
                 let merged = merge(base, ours, &theirs, &role);
                 if let Some(head) = self.edits.get_mut(&resource).and_then(VecDeque::front_mut) {
@@ -896,7 +1073,18 @@ impl SyncState {
             .is_some_and(|head| head.edit.operation == Operation::Delete);
         match outcome {
             Outcome::Written(event) => {
-                self.observe_write(request, resource, Some(event), out);
+                let created = self
+                    .head(resource)
+                    .is_some_and(|head| matches!(head.edit.operation, Operation::Create(_)));
+                let named = ResourceId::of(&event);
+                if created {
+                    // Where the provider named the event, a doubtful outcome is checked by
+                    // reading that id: the key names nothing to read.
+                    self.observe_write(request, &named, Some(event), out);
+                    self.remap(resource, &named, out);
+                } else {
+                    self.observe_write(request, resource, Some(event), out);
+                }
                 self.finish(resource, None, out);
             }
             Outcome::Deleted => {
@@ -908,7 +1096,7 @@ impl SyncState {
                 self.finish(resource, None, out);
             }
             Outcome::Failed(Failure::Rejected(reason)) => {
-                self.finish(resource, Some(Rejection::Provider(reason)), out);
+                self.finish(resource, Some(&Rejection::Provider(reason)), out);
             }
             Outcome::Failed(Failure::AlreadyExists) => {
                 if let Some(head) = self.edits.get_mut(resource).and_then(VecDeque::front_mut) {
@@ -948,7 +1136,7 @@ impl SyncState {
     fn finish(
         &mut self,
         resource: &ResourceId,
-        rejection: Option<Rejection>,
+        rejection: Option<&Rejection>,
         out: &mut Vec<Effect>,
     ) {
         let Some(queue) = self.edits.get_mut(resource) else {
@@ -960,16 +1148,25 @@ impl SyncState {
         if queue.is_empty() {
             self.edits.remove(resource);
         }
-        let edit = done.edit.id;
-        out.push(Effect::Notify(match rejection {
-            None => Notice::Applied {
-                edit,
-                conflicts: done.conflicts,
-                refused: done.refused,
-            },
-            Some(reason) => Notice::Rejected { edit, reason },
-        }));
+        Self::notify(done, rejection, out);
         self.start_edit(resource, out);
+    }
+
+    /// Ends `done` and every edit folded into it, applied or rejected.
+    fn notify(done: Pending, rejection: Option<&Rejection>, out: &mut Vec<Effect>) {
+        for edit in core::iter::once(done.edit.id).chain(done.absorbed) {
+            out.push(Effect::Notify(match rejection {
+                None => Notice::Applied {
+                    edit,
+                    conflicts: done.conflicts.clone(),
+                    refused: done.refused.clone(),
+                },
+                Some(reason) => Notice::Rejected {
+                    edit,
+                    reason: reason.clone(),
+                },
+            }));
+        }
     }
 
     // Time and restarts.
@@ -992,9 +1189,9 @@ impl SyncState {
                     && !(index == 0 && writing);
                 if expired {
                     head_dropped |= index == 0;
-                    out.push(Effect::Notify(Notice::Expired {
-                        edit: pending.edit.id,
-                    }));
+                    for edit in core::iter::once(pending.edit.id).chain(pending.absorbed) {
+                        out.push(Effect::Notify(Notice::Expired { edit }));
+                    }
                 } else {
                     kept.push_back(pending);
                 }
@@ -1052,6 +1249,55 @@ impl SyncState {
 )]
 const fn is_zero(value: &u64) -> bool {
     *value == 0
+}
+
+/// Whether the provider of `event` assigns the ids of the events created on it, so that a create
+/// is queued under its idempotency key and looked up before it is sent.
+fn assigns_ids(event: &ProviderEvent) -> bool {
+    event.ids.provider == Provider::Graph
+}
+
+/// What folding a new edit into the edit waiting before it gives.
+#[allow(
+    clippy::large_enum_variant,
+    reason = "a result is matched once, right after it is made; boxing would only add an allocation"
+)]
+enum Coalesced {
+    /// One edit with this operation.
+    Into(Operation),
+    /// Nothing: the two edits undo each other.
+    Cancelled,
+}
+
+/// Folds `next` into `waiting`, two edits for one resource that have not started, where the pair
+/// has the effect of one edit.
+fn coalesce(waiting: &Edit, next: &Edit) -> Option<Coalesced> {
+    if waiting.role != next.role {
+        return None;
+    }
+    let deletes = matches!(next.role, Role::Owner);
+    match (&waiting.operation, &next.operation) {
+        (
+            Operation::Update { base, ours },
+            Operation::Update {
+                base: from,
+                ours: to,
+            },
+        ) if from == ours => Some(Coalesced::Into(Operation::Update {
+            base: base.clone(),
+            ours: to.clone(),
+        })),
+        (Operation::Update { .. }, Operation::Delete) if deletes => {
+            Some(Coalesced::Into(Operation::Delete))
+        }
+        (Operation::Create(event), Operation::Update { base, ours }) if *base == event.fields => {
+            let mut event = event.clone();
+            event.fields = ours.clone();
+            Some(Coalesced::Into(Operation::Create(event)))
+        }
+        (Operation::Create(_), Operation::Delete) if deletes => Some(Coalesced::Cancelled),
+        _ => None,
+    }
 }
 
 /// A short description of an outcome the engine could not use, for a notice.

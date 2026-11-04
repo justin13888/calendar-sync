@@ -20,6 +20,8 @@
 //! | [`Failure::CursorExpired`] | `410 Gone` | `410` `syncStateNotFound` | `DAV:valid-sync-token` | `cannotCalculateChanges` |
 //! | [`Change::Upsert`] without an event | | | a `200` with only an `ETag` | `updated` ids |
 //! | [`Request::Update`] precondition | `If-Match` on `etag` | `If-Match` on `changeKey` | `If-Match` on `ETag` | `ifInState`, or a read-compare |
+//! | [`Request::Create`] | `events.insert` with the id | `POST` with `transactionId` and an extended property | `PUT` with `If-None-Match: *` | `CalendarEvent/set` `create` |
+//! | [`Request::Lookup`] | | `$filter` on the extended property | | |
 //!
 //! A [`Cursor`] is opaque to the engine and owned by the seam, so a seam may encode in it
 //! whatever its protocol needs to continue.
@@ -32,7 +34,8 @@
 //! - [`Failure::Transient`] means the request may or may not have taken effect. The engine reads
 //!   before it repeats a write, so a transient failure never applies an edit twice, provided a
 //!   create is idempotent for its [`ResourceId`]. A provider that assigns its own ids (Graph)
-//!   makes it so with a client-chosen key such as Graph's `transactionId`.
+//!   makes it so with a client-chosen key such as Graph's `transactionId`, and answers
+//!   [`Request::Lookup`] for that key, which the engine sends before every such create.
 //! - [`Outcome::Written`] carries the resource as the provider now holds it, with its new
 //!   revision. Its id may differ from the requested one where the provider assigns ids.
 
@@ -120,6 +123,14 @@ pub enum Request {
     Read {
         /// The resource.
         resource: ResourceId,
+    },
+    /// Find the resource a create made under an idempotency key, on a provider that assigns its
+    /// own ids. Answered like [`Request::Read`]: the resource, under the id the provider gave it,
+    /// or `None` where no create under `key` took effect.
+    Lookup {
+        /// The idempotency key the create was sent with:
+        /// [`DerivedIds::idempotency_key`](crate::DerivedIds::idempotency_key).
+        key: ResourceId,
     },
     /// Create a resource that must not exist yet.
     Create {

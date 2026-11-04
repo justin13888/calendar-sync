@@ -8,8 +8,16 @@
 //! `changeKey`, which `If-Match` on `PATCH` and `DELETE` compares. Bodies are opaque JSON;
 //! `PATCH` replaces the top-level properties it names.
 //!
+//! A create may carry a `transactionId`. A retry with the same one, while the server remembers
+//! it and the event it made is still there, returns that event instead of making another. How
+//! long and across which clients Graph remembers one is unverified, so the fake remembers it for
+//! [`FakeGraph::with_transaction_lifetime`] calls, or for ever. Single-value extended properties
+//! in a body (`singleValueExtendedProperties`) can be filtered on with [`FakeGraph::find`].
+//!
 //! The date window that `calendarView/delta` requires is not modelled: the fake reports every
 //! event.
+
+use std::collections::BTreeMap;
 
 use serde_json::Value;
 
@@ -93,6 +101,10 @@ impl Error {
 pub struct FakeGraph {
     server: Server<Value>,
     next_id: u64,
+    /// Each `transactionId` seen, to the event it created and the call that created it.
+    transactions: BTreeMap<String, (String, u64)>,
+    /// For how many calls a `transactionId` is remembered; `None` for ever.
+    transaction_lifetime: Option<u64>,
 }
 
 fn change_key(seq: u64) -> String {
@@ -107,6 +119,18 @@ fn event(id: &str, resource: &Resource<Value>) -> Event {
     }
 }
 
+/// Whether `body` holds the single-value extended property `property` with `value`.
+fn has_property(body: &Value, property: &str, value: &str) -> bool {
+    body.get("singleValueExtendedProperties")
+        .and_then(Value::as_array)
+        .is_some_and(|properties| {
+            properties.iter().any(|entry| {
+                entry.get("id").and_then(Value::as_str) == Some(property)
+                    && entry.get("value").and_then(Value::as_str) == Some(value)
+            })
+        })
+}
+
 /// The token in a link the fake issued, or the link itself, which then fails as expired.
 fn token(link: &str) -> &str {
     link.rsplit_once("token=").map_or(link, |(_, token)| token)
@@ -119,7 +143,16 @@ impl FakeGraph {
         Self {
             server: Server::new(plan),
             next_id: 0,
+            transactions: BTreeMap::new(),
+            transaction_lifetime: None,
         }
+    }
+
+    /// Remember each `transactionId` for `calls` calls after the create that carried it.
+    #[must_use]
+    pub fn with_transaction_lifetime(mut self, calls: u64) -> Self {
+        self.transaction_lifetime = Some(calls);
+        self
     }
 
     /// `GET /me/calendarView/delta`, or a link it returned.
@@ -177,10 +210,58 @@ impl FakeGraph {
     ///
     /// [`Error::LostResponse`], after which the event exists.
     pub fn create(&mut self, body: Value) -> Result<Event, Error> {
+        self.create_with(body, None)
+    }
+
+    /// `POST /me/events` with an optional `transactionId`. A create carrying one the server
+    /// still remembers, whose event still exists, returns that event and makes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::LostResponse`], after which the event exists.
+    pub fn create_with(
+        &mut self,
+        body: Value,
+        transaction_id: Option<&str>,
+    ) -> Result<Event, Error> {
         let fault = self.server.begin(CallKind::Write);
-        let id = self.mint_id();
-        let result = Ok(self.put(&id, body));
+        let call = self.server.calls();
+        let remembered = transaction_id
+            .and_then(|key| self.transactions.get(key))
+            .filter(|(_, made)| {
+                self.transaction_lifetime
+                    .is_none_or(|lifetime| call <= made + lifetime)
+            })
+            .and_then(|(id, _)| self.server.live(id).map(|resource| event(id, resource)));
+        let result = Ok(match remembered {
+            Some(existing) => existing,
+            None => {
+                let id = self.mint_id();
+                if let Some(key) = transaction_id {
+                    self.transactions.insert(key.to_owned(), (id.clone(), call));
+                }
+                self.put(&id, body)
+            }
+        });
         self.lose(fault, result)
+    }
+
+    /// `GET /me/events?$filter=singleValueExtendedProperties/any(ep: ep/id eq '{property}' and
+    /// ep/value eq '{value}')`: the live events whose body carries that extended property, in id
+    /// order.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::LostResponse`].
+    pub fn find(&mut self, property: &str, value: &str) -> Result<Vec<Event>, Error> {
+        let fault = self.server.begin(CallKind::Read);
+        let found = self
+            .server
+            .live_resources()
+            .filter(|(_, resource)| has_property(&resource.body, property, value))
+            .map(|(id, resource)| event(id, resource))
+            .collect();
+        self.lose(fault, Ok(found))
     }
 
     /// `PATCH /me/events/{id}`, replacing the top-level properties `patch` names, conditional on
