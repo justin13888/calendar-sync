@@ -34,9 +34,11 @@ use calendar_sync_model::{
     Attendee, EventStatus, EventTimes, Field, NormalizedEvent, Organizer, Participation,
     ProviderEvent, Recurrence, Reminders, Transparency, Visibility,
 };
+use serde::{Deserialize, Serialize};
 
 /// Which parts of an event the writer owns.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Role {
     /// The organizer, or the only user of an event with no organizer. Owns every field.
     Owner,
@@ -64,7 +66,8 @@ pub struct MergeOutcome {
 }
 
 /// A unit that base, ours and theirs all disagree on.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Conflict {
     /// The field.
     pub field: Field,
@@ -79,7 +82,8 @@ pub struct Conflict {
 }
 
 /// A unit the writer changed without owning it.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Refused {
     /// The field.
     pub field: Field,
@@ -88,7 +92,8 @@ pub struct Refused {
 }
 
 /// One side's value of a merge unit.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum FieldValue {
     /// [`NormalizedEvent::title`].
     Title(Option<String>),
