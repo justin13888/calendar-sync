@@ -1,0 +1,62 @@
+amends "package://github.com/jdx/hk/releases/download/v2.11.0/hk@2.11.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.11.0/hk@2.11.0#/Builtins.pkl"
+
+// The fixture crates under tests/fixtures/ must fail clippy and cargo-deny on purpose, so the
+// Rust steps skip them; `cargo xtask fixture` checks them instead.
+local fixtures = List("tests/fixtures/**")
+
+// Linters shared by the pre-commit hook and by `hk check` / `hk fix` (`mise run lint` / `mise run fix`).
+// The Rust steps run once over the whole workspace rather than per crate (the builtins run per
+// manifest, which fails on the virtual root manifest and does not deny clippy warnings).
+local linters = new Mapping<String, Step> {
+    ["cargo_fmt"] {
+        glob = List("**/*.rs", "rustfmt.toml")
+        exclude = fixtures
+        check = "cargo fmt --all --check"
+        fix = "cargo fmt --all"
+    }
+    ["cargo_clippy"] {
+        glob = List("**/*.rs", "**/Cargo.toml", "Cargo.lock", "clippy.toml", "xtask/clippy.toml")
+        exclude = fixtures
+        check = "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
+    }
+    ["taplo_format"] = Builtins.taplo_format
+    ["typos"] = Builtins.typos
+    ["actionlint"] = Builtins.actionlint
+    ["zizmor"] = Builtins.zizmor
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps = linters
+    }
+    ["commit-msg"] {
+        steps {
+            ["cog"] {
+                check = "cog verify --file {{commit_msg_file}}"
+            }
+        }
+    }
+    ["pre-push"] {
+        steps {
+            ["test"] {
+                check = "mise run test"
+            }
+            ["deny"] {
+                check = "mise run deny"
+            }
+            ["purity"] {
+                check = "mise run purity"
+            }
+        }
+    }
+    ["check"] {
+        steps = linters
+    }
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+}

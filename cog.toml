@@ -1,0 +1,32 @@
+# Conventional Commits, strictly. This file is the single source of the convention: the hk
+# commit-msg hook (`cog verify --file`) and the CI `commits` job (`cog check`, `cog verify` on the
+# pull request title) both read it.
+#
+# Allowed types are cocogitto's defaults: feat, fix, perf, refactor, docs, test, build, ci, chore,
+# revert, style. Nothing is added.
+
+# Pull requests are squash-merged with the title as the message; merge commits from updating a
+# branch carry git's own message and are not checked.
+ignore_merge_commits = true
+ignore_fixup_commits = false
+
+# A scope is optional, but when given it must be one of these.
+scopes = [
+  # Crates, by short name
+  "facade",
+  "model",
+  "recurrence",
+  "engine",
+  "ical",
+  "google",
+  "graph",
+  "caldav",
+  "testkit",
+  "xtask",
+  # Repository areas
+  "deps",
+  "ci",
+  "release",
+  "references",
+  "repo",
+]

@@ -1,0 +1,15 @@
+# A crate that MUST fail `cargo deny check licenses`: it depends on a GPL-3.0 crate, which the
+# workspace deny.toml does not allow. `cargo xtask fixture deny` asserts the rejection. Excluded
+# from the workspace and never built by it.
+[package]
+name = "deny-fixture"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+copyleft = { path = "copyleft", version = "0.0.0" }

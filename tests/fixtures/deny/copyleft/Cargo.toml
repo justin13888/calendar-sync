@@ -1,0 +1,9 @@
+# The copyleft dependency of the deny fixture. Its licence is the point: GPL-3.0-only.
+[package]
+name = "copyleft"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-only"
+
+[lib]
+path = "lib.rs"

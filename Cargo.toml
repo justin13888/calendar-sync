@@ -1,0 +1,69 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "xtask"]
+# Fixture crates that must fail the purity and licence gates. They are standalone workspaces.
+exclude = ["tests/fixtures/purity", "tests/fixtures/deny"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# The MSRV Sunrise needs (it pins 1.91.1). `cargo xtask toolchain` asserts this value.
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+authors = ["Justin Chung"]
+repository = "https://github.com/justin13888/calendar-sync"
+homepage = "https://github.com/justin13888/calendar-sync"
+keywords = ["calendar", "sync", "icalendar", "caldav", "recurrence"]
+categories = ["date-and-time"]
+
+[workspace.dependencies]
+calendar-sync-model = { path = "crates/calendar-sync-model", version = "0.1.0" }
+calendar-sync-recurrence = { path = "crates/calendar-sync-recurrence", version = "0.1.0" }
+calendar-sync-engine = { path = "crates/calendar-sync-engine", version = "0.1.0" }
+calendar-sync-ical = { path = "crates/calendar-sync-ical", version = "0.1.0" }
+calendar-sync-google = { path = "crates/calendar-sync-google", version = "0.1.0" }
+calendar-sync-graph = { path = "crates/calendar-sync-graph", version = "0.1.0" }
+calendar-sync-caldav = { path = "crates/calendar-sync-caldav", version = "0.1.0" }
+calendar-sync-testkit = { path = "crates/calendar-sync-testkit", version = "0.1.0" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "warn"
+
+[workspace.lints.clippy]
+# Curated pedantic lints. The whole `pedantic` group is too noisy to enable wholesale.
+cast_lossless = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+cloned_instead_of_copied = "warn"
+doc_markdown = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+flat_map_option = "warn"
+implicit_clone = "warn"
+inefficient_to_string = "warn"
+manual_let_else = "warn"
+match_same_arms = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+needless_pass_by_value = "warn"
+redundant_closure_for_method_calls = "warn"
+redundant_else = "warn"
+semicolon_if_nothing_returned = "warn"
+uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
+used_underscore_binding = "warn"
+# Restriction lints that keep stray debugging out of the libraries.
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+
+[profile.dev]
+debug = "line-tables-only"

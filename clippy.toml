@@ -1,0 +1,57 @@
+# Purity, layer one of three (the others are `cargo xtask purity` and the fixtures it checks).
+#
+# Library code reads no clock, filesystem, environment or ambient randomness: the application
+# supplies them. This applies to every workspace crate; provider crates take a clock as an input
+# too. xtask/clippy.toml replaces this file for xtask. `allow-invalid` keeps entries for crates a
+# given package does not depend on from warning.
+
+doc-valid-idents = ["CalDAV", "iCalendar", "iCal", "iTIP", "JSCalendar", "WebDAV", ".."]
+
+disallowed-methods = [
+  # Clock
+  { path = "std::time::SystemTime::now", reason = "take the current time as an input" },
+  { path = "std::time::Instant::now", reason = "take the current time as an input" },
+  { path = "jiff::Timestamp::now", reason = "take the current time as an input", allow-invalid = true },
+  { path = "jiff::Zoned::now", reason = "take the current time as an input", allow-invalid = true },
+  { path = "jiff::tz::TimeZone::system", reason = "take the time zone as an input", allow-invalid = true },
+  { path = "jiff::tz::TimeZone::try_system", reason = "take the time zone as an input", allow-invalid = true },
+  # Environment
+  { path = "std::env::var", reason = "take configuration as an input" },
+  { path = "std::env::var_os", reason = "take configuration as an input" },
+  { path = "std::env::vars", reason = "take configuration as an input" },
+  { path = "std::env::vars_os", reason = "take configuration as an input" },
+  # Filesystem
+  { path = "std::fs::canonicalize", reason = "the application owns storage" },
+  { path = "std::fs::copy", reason = "the application owns storage" },
+  { path = "std::fs::create_dir", reason = "the application owns storage" },
+  { path = "std::fs::create_dir_all", reason = "the application owns storage" },
+  { path = "std::fs::exists", reason = "the application owns storage" },
+  { path = "std::fs::hard_link", reason = "the application owns storage" },
+  { path = "std::fs::metadata", reason = "the application owns storage" },
+  { path = "std::fs::read", reason = "the application owns storage" },
+  { path = "std::fs::read_dir", reason = "the application owns storage" },
+  { path = "std::fs::read_link", reason = "the application owns storage" },
+  { path = "std::fs::read_to_string", reason = "the application owns storage" },
+  { path = "std::fs::remove_dir", reason = "the application owns storage" },
+  { path = "std::fs::remove_dir_all", reason = "the application owns storage" },
+  { path = "std::fs::remove_file", reason = "the application owns storage" },
+  { path = "std::fs::rename", reason = "the application owns storage" },
+  { path = "std::fs::set_permissions", reason = "the application owns storage" },
+  { path = "std::fs::symlink_metadata", reason = "the application owns storage" },
+  { path = "std::fs::write", reason = "the application owns storage" },
+  # Ambient randomness
+  { path = "rand::random", reason = "take randomness as an input", allow-invalid = true },
+  { path = "rand::thread_rng", reason = "take randomness as an input", allow-invalid = true },
+  { path = "rand::rng", reason = "take randomness as an input", allow-invalid = true },
+  { path = "getrandom::getrandom", reason = "take randomness as an input", allow-invalid = true },
+  { path = "getrandom::fill", reason = "take randomness as an input", allow-invalid = true },
+  { path = "getrandom::u32", reason = "take randomness as an input", allow-invalid = true },
+  { path = "getrandom::u64", reason = "take randomness as an input", allow-invalid = true },
+]
+
+disallowed-types = [
+  { path = "std::fs::File", reason = "the application owns storage" },
+  { path = "std::fs::OpenOptions", reason = "the application owns storage" },
+  { path = "rand::rngs::ThreadRng", reason = "take randomness as an input", allow-invalid = true },
+  { path = "rand::rngs::OsRng", reason = "take randomness as an input", allow-invalid = true },
+]

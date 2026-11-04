@@ -1,0 +1,8 @@
+/target/
+# The fixture crates are standalone workspaces built only to prove they fail.
+/tests/fixtures/*/target/
+/tests/fixtures/*/Cargo.lock
+# Local tool overrides
+/mise.local.toml
+/hk.local.pkl
+.DS_Store
