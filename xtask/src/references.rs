@@ -29,7 +29,12 @@ pub(crate) fn verify(root: &Path) -> Result {
 
 /// `cargo xtask references upstream`.
 pub(crate) fn upstream(root: &Path) -> Result {
-    let dir = root.join("references");
+    upstream_dir(&root.join("references"), |url| download(url, root))
+}
+
+/// Compares every file `dir` (a `references/` directory) documents with the bytes `fetch` returns
+/// for its source: an `immutable` mismatch fails, a `snapshot` mismatch is reported.
+fn upstream_dir(dir: &Path, mut fetch: impl FnMut(&str) -> Result<Vec<u8>>) -> Result {
     let entries = parse_readme(&read_text(&dir.join(README))?)?;
     let sums = parse_sums(&read_text(&dir.join(SUMS))?)?;
     let mut failures = Vec::new();
@@ -38,7 +43,7 @@ pub(crate) fn upstream(root: &Path) -> Result {
             failures.push(format!("{}: not listed in {SUMS}", entry.path));
             continue;
         };
-        let fresh = match download(&entry.source, root) {
+        let fresh = match fetch(&entry.source) {
             Ok(bytes) => bytes,
             Err(e) => {
                 failures.push(format!("{}: {e}", entry.path));
@@ -618,5 +623,53 @@ Prose | with a pipe is not a table.
             error.contains("google/c.json: documented in README.md, but not listed"),
             "{error}"
         );
+    }
+
+    /// Serves the scratch tree's sources: `a` for the immutable `rfc/a.txt`, `b` for the snapshot
+    /// `google/b.json`.
+    fn serve<'a>(a: &'a str, b: &'a str) -> impl FnMut(&str) -> Result<Vec<u8>> + 'a {
+        move |url| match url {
+            "https://example.org/a.txt" => Ok(a.as_bytes().to_vec()),
+            "https://example.org/b" => Ok(b.as_bytes().to_vec()),
+            other => Err(format!("unexpected source {other}")),
+        }
+    }
+
+    #[test]
+    fn unchanged_sources_pass_upstream() {
+        let scratch = Scratch::new("upstream-same");
+        assert_eq!(
+            upstream_dir(&scratch.0, serve("RFC text\n", "{\"revision\": \"1\"}")),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn a_changed_immutable_source_fails_upstream() {
+        let scratch = Scratch::new("upstream-immutable");
+        let error =
+            upstream_dir(&scratch.0, serve("RFC texT\n", "{\"revision\": \"1\"}")).unwrap_err();
+        assert!(
+            error.contains("rfc/a.txt: https://example.org/a.txt no longer matches its checksum"),
+            "{error}"
+        );
+        assert!(!error.contains("google/b.json"), "{error}");
+    }
+
+    #[test]
+    fn a_changed_snapshot_source_passes_upstream() {
+        let scratch = Scratch::new("upstream-snapshot");
+        assert_eq!(
+            upstream_dir(&scratch.0, serve("RFC text\n", "{\"revision\": \"2\"}")),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn a_failed_download_fails_upstream() {
+        let scratch = Scratch::new("upstream-download");
+        let error = upstream_dir(&scratch.0, |_: &str| Err("offline".to_owned())).unwrap_err();
+        assert!(error.contains("rfc/a.txt: offline"), "{error}");
+        assert!(error.contains("google/b.json: offline"), "{error}");
     }
 }
