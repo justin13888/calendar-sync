@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: a weekly series with one instance moved and one cancelled, each its own resource keyed by originalStartTime",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5ue6you0k\"",
+            "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAk=",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784900000\"",
+                "id": "rec001",
+                "status": "confirmed",
+                "summary": "Synthetic text 8",
+                "organizer": {
+                  "email": "person1@example.com",
+                  "self": true
+                },
+                "start": {
+                  "dateTime": "2026-11-03T10:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "end": {
+                  "dateTime": "2026-11-03T10:15:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "recurrence": [
+                  "RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=6",
+                  "EXDATE;TZID=America/Toronto:20261201T100000"
+                ],
+                "iCalUID": "rec001@example.com",
+                "reminders": {
+                  "useDefault": true
+                },
+                "eventType": "default"
+              },
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784901000\"",
+                "id": "rec001_20261110T150000Z",
+                "status": "confirmed",
+                "summary": "Synthetic text 8",
+                "organizer": {
+                  "email": "person1@example.com",
+                  "self": true
+                },
+                "start": {
+                  "dateTime": "2026-11-10T11:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "end": {
+                  "dateTime": "2026-11-10T11:15:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "recurringEventId": "rec001",
+                "originalStartTime": {
+                  "dateTime": "2026-11-10T10:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "iCalUID": "rec001@example.com",
+                "reminders": {
+                  "useDefault": true
+                },
+                "eventType": "default"
+              },
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784902000\"",
+                "id": "rec001_20261117T150000Z",
+                "status": "cancelled",
+                "recurringEventId": "rec001",
+                "originalStartTime": {
+                  "dateTime": "2026-11-17T10:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

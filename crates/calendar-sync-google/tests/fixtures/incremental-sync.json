@@ -1,0 +1,55 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: an incremental list after one event changed",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events?syncToken=CPDAlvWDx70CEPDAlvWDx70CGAU%3D"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5ue6you0h\"",
+            "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAY=",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784799000\"",
+                "id": "evt001",
+                "status": "confirmed",
+                "updated": "2026-11-04T13:00:00.000Z",
+                "summary": "Synthetic text 7",
+                "organizer": {
+                  "email": "person1@example.com",
+                  "self": true
+                },
+                "start": {
+                  "dateTime": "2026-11-05T11:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "end": {
+                  "dateTime": "2026-11-05T11:30:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "iCalUID": "evt001@example.com",
+                "sequence": 1,
+                "reminders": {
+                  "useDefault": true
+                },
+                "eventType": "default"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

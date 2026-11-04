@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: an incremental list answers 410 Gone, and the client lists again from scratch",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events?syncToken=CPDAlvWDx70CEPDAlvWDx70CGAc%3D"
+      },
+      "response": {
+        "status": 410,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 410,
+              "message": "Sync token is no longer valid, a full sync is required.",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "fullSyncRequired",
+                  "message": "Sync token is no longer valid, a full sync is required."
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5ue6you0j\"",
+            "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAg=",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784714000\"",
+                "id": "evt003",
+                "status": "confirmed",
+                "summary": "Synthetic text 6",
+                "start": {
+                  "dateTime": "2026-11-09T14:00:00Z"
+                },
+                "end": {
+                  "dateTime": "2026-11-09T15:00:00Z"
+                },
+                "iCalUID": "evt003@example.com",
+                "eventType": "default"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

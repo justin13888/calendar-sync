@@ -1,0 +1,235 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: an insert under a client-chosen id, an update with If-Match, a stale If-Match answering 412, a repeated insert answering 409, a missing event, and a rate limit",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/calendar/v3/calendars/team%40example.com/events",
+        "headers": {
+          "content-type": "application/json"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#event",
+            "etag": "\"3181161785000000\"",
+            "id": "cseditckog",
+            "status": "confirmed",
+            "summary": "Synthetic text 9",
+            "start": {
+              "dateTime": "2026-11-12T09:00:00-05:00",
+              "timeZone": "America/Toronto"
+            },
+            "end": {
+              "dateTime": "2026-11-12T09:30:00-05:00",
+              "timeZone": "America/Toronto"
+            },
+            "iCalUID": "cseditckog@example.com",
+            "sequence": 0,
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "/calendar/v3/calendars/team%40example.com/events/cseditckog",
+        "headers": {
+          "content-type": "application/json",
+          "if-match": "\"3181161785000000\""
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#event",
+            "etag": "\"3181161785001000\"",
+            "id": "cseditckog",
+            "status": "confirmed",
+            "summary": "Synthetic text 10",
+            "start": {
+              "dateTime": "2026-11-12T09:00:00-05:00",
+              "timeZone": "America/Toronto"
+            },
+            "end": {
+              "dateTime": "2026-11-12T09:30:00-05:00",
+              "timeZone": "America/Toronto"
+            },
+            "iCalUID": "cseditckog@example.com",
+            "sequence": 0,
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "/calendar/v3/calendars/team%40example.com/events/cseditckog",
+        "headers": {
+          "content-type": "application/json",
+          "if-match": "\"3181161785000000\""
+        }
+      },
+      "response": {
+        "status": 412,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 412,
+              "message": "Precondition Failed",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "conditionNotMet",
+                  "message": "Precondition Failed",
+                  "locationType": "header",
+                  "location": "If-Match"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/calendar/v3/calendars/team%40example.com/events",
+        "headers": {
+          "content-type": "application/json"
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 409,
+              "message": "The requested identifier already exists.",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "duplicate",
+                  "message": "The requested identifier already exists."
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/team%40example.com/events/missing0"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 404,
+              "message": "Not Found",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "notFound",
+                  "message": "Not Found"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/team%40example.com/events/cseditckog"
+      },
+      "response": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 403,
+              "message": "Rate Limit Exceeded",
+              "errors": [
+                {
+                  "domain": "usageLimits",
+                  "reason": "rateLimitExceeded",
+                  "message": "Rate Limit Exceeded"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/team%40example.com/events/cseditckog"
+      },
+      "response": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": 403,
+              "message": "Forbidden",
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "forbidden",
+                  "message": "Forbidden"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
