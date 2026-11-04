@@ -5,9 +5,11 @@
 all-features = true
 
 [advisories]
-# Unmaintained and unsound advisories fail too, not only vulnerabilities.
-unmaintained = "all"
-yanked = "deny"
+# Vulnerability and unsound advisories fail for every crate in the graph. Unmaintained advisories
+# fail only for crates the workspace depends on directly, and yanked crates only warn, so an
+# upstream crate's status cannot break CI on a pull request that does not touch dependencies.
+unmaintained = "workspace"
+yanked = "warn"
 ignore = []
 
 [licenses]
