@@ -123,6 +123,12 @@ version = "0.1.0"
 [[package]]
 name = "calendar-sync-testkit"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "proptest",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "cfg-if"
