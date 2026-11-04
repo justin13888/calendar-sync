@@ -1,0 +1,24 @@
+# release-plz: release pull requests, changelogs, tags and GitHub releases.
+#
+# .github/workflows/release-plz.yml runs it on every push to master. CONTRIBUTING.md describes the
+# release flow. Crates with `publish = false` in their Cargo.toml are skipped entirely.
+
+[workspace]
+# One CHANGELOG.md per crate, generated from Conventional Commits by git-cliff's rules in cliff.toml.
+changelog_config = "cliff.toml"
+changelog_update = true
+# Each crate is tagged and released on GitHub on its own.
+git_tag_enable = true
+git_tag_name = "{{ package }}-v{{ version }}"
+git_release_enable = true
+git_release_name = "{{ package }} v{{ version }}"
+# Run cargo-semver-checks against the last published version; an incompatible API change it finds
+# forces a breaking version bump and is reported in the release pull request's body.
+semver_check = true
+# Publish only when a release pull request merges, not on every push to master.
+release_always = false
+# The title is the squash-merge commit message, so it must pass `cog verify` (`release` is a scope
+# in cog.toml). A fixed title also stops release-plz from using a crate name as the scope, which
+# cog.toml would reject.
+pr_name = "chore(release): release"
+pr_labels = ["release"]
