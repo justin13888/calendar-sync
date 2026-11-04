@@ -74,7 +74,8 @@ impl HttpRequest {
 pub struct HttpResponse {
     /// The status code.
     pub status: u16,
-    /// The headers. Only `Content-Type` and `Retry-After` are read, and only for diagnostics.
+    /// The headers. The seam reads none of them: they are kept for the application, which may
+    /// honour `Retry-After` before the engine tries a transient failure again.
     pub headers: Vec<(String, String)>,
     /// The body's bytes.
     pub body: Vec<u8>,
