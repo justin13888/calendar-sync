@@ -20,6 +20,7 @@
 
 pub mod caldav;
 mod fault;
+pub mod fixture;
 pub mod google;
 pub mod graph;
 mod rng;

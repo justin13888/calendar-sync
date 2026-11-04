@@ -120,6 +120,9 @@ version = "0.1.0"
 name = "calendar-sync-testkit"
 version = "0.1.0"
 dependencies = [
+ "calendar-sync-model",
+ "proptest",
+ "serde",
  "serde_json",
 ]
 
