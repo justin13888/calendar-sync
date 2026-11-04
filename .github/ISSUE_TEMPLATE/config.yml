@@ -1,0 +1,7 @@
+# Issues opened in the web UI start from a template in this directory; blank issues are off.
+# Issues created through the API or `gh issue create --body` are unaffected.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/justin13888/calendar-sync/security/advisories/new
+    about: Report vulnerabilities privately, as SECURITY.md describes, never in a public issue.
