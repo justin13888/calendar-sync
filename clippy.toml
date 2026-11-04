@@ -50,6 +50,7 @@ disallowed-methods = [
 ]
 
 disallowed-types = [
+  { path = "std::fs::DirBuilder", reason = "the application owns storage" },
   { path = "std::fs::File", reason = "the application owns storage" },
   { path = "std::fs::OpenOptions", reason = "the application owns storage" },
   { path = "rand::rngs::ThreadRng", reason = "take randomness as an input", allow-invalid = true },
