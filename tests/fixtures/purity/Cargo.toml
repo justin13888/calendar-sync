@@ -1,0 +1,12 @@
+# A crate that MUST fail clippy: it reads the clock and the filesystem, which the workspace
+# clippy.toml disallows. `cargo xtask fixture purity` asserts the rejection. Excluded from the
+# workspace and never built by it.
+[package]
+name = "purity-fixture"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+path = "lib.rs"

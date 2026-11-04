@@ -1,0 +1,2 @@
+# xtask is repository automation, not library code: it reads files and the environment and runs
+# processes. This file replaces the workspace clippy.toml for this crate, dropping the purity bans.

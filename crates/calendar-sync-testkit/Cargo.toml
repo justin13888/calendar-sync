@@ -1,0 +1,19 @@
+[package]
+name = "calendar-sync-testkit"
+description = "Fake calendar providers with fault injection, and recorded fixtures, for testing calendar-sync"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
+# Unpublished until this crate's release issue.
+publish = false
+
+[lints]
+workspace = true
