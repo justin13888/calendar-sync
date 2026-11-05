@@ -67,3 +67,26 @@ jobs:
           name: fuzz-artifacts
           path: fuzz/artifacts
           if-no-files-found: ignore
+
+  google-live:
+    name: google live probes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      # Probes a dedicated test calendar through the Google seam (crates/calendar-sync-google,
+      # tests/live.rs). Until the probe account's secrets exist, the gate stays unset and the
+      # suite reports that it skipped.
+      - name: Probe Google Calendar
+        env:
+          CALENDAR_SYNC_GOOGLE_LIVE: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN != '' && '1' || '' }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+        run: cargo test --locked -p calendar-sync-google --test live -- --ignored --nocapture

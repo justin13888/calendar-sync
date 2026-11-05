@@ -1,0 +1,152 @@
+{
+  "format": 1,
+  "provider": "google",
+  "description": "Synthetic, from the documented formats: a full list in two pages; only the last carries nextSyncToken",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events?maxResults=2"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5k16q0g\"",
+            "summary": "Synthetic text 1",
+            "updated": "2026-11-04T12:00:00.000Z",
+            "timeZone": "America/Toronto",
+            "accessRole": "owner",
+            "defaultReminders": [
+              {
+                "method": "popup",
+                "minutes": 10
+              }
+            ],
+            "nextPageToken": "CigKGjBvNjBvZzJxYzhvMzZiOWc2NG8zMGI5aw",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784712000\"",
+                "id": "evt001",
+                "status": "confirmed",
+                "htmlLink": "https://www.google.com/calendar/event?eid=ZXZ0MDAx",
+                "created": "2026-10-01T12:00:00.000Z",
+                "updated": "2026-10-02T12:00:00.000Z",
+                "summary": "Synthetic text 2",
+                "location": "Synthetic text 3",
+                "creator": {
+                  "email": "person1@example.com",
+                  "self": true
+                },
+                "organizer": {
+                  "email": "person1@example.com",
+                  "self": true
+                },
+                "start": {
+                  "dateTime": "2026-11-05T10:00:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "end": {
+                  "dateTime": "2026-11-05T10:30:00-05:00",
+                  "timeZone": "America/Toronto"
+                },
+                "iCalUID": "evt001@example.com",
+                "sequence": 0,
+                "attendees": [
+                  {
+                    "email": "person1@example.com",
+                    "organizer": true,
+                    "self": true,
+                    "responseStatus": "accepted"
+                  },
+                  {
+                    "email": "person2@example.com",
+                    "displayName": "Synthetic text 4",
+                    "optional": true,
+                    "responseStatus": "needsAction"
+                  }
+                ],
+                "reminders": {
+                  "useDefault": true
+                },
+                "eventType": "default"
+              },
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784713000\"",
+                "id": "evt002",
+                "status": "confirmed",
+                "summary": "Synthetic text 5",
+                "start": {
+                  "date": "2026-11-06"
+                },
+                "end": {
+                  "date": "2026-11-07"
+                },
+                "transparency": "transparent",
+                "iCalUID": "evt002@example.com",
+                "reminders": {
+                  "useDefault": false
+                },
+                "eventType": "default"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/calendar/v3/calendars/primary/events?maxResults=2&pageToken=CigKGjBvNjBvZzJxYzhvMzZiOWc2NG8zMGI5aw"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "kind": "calendar#events",
+            "etag": "\"p33c9vj5k16q0g\"",
+            "nextSyncToken": "CPDAlvWDx70CEPDAlvWDx70CGAU=",
+            "items": [
+              {
+                "kind": "calendar#event",
+                "etag": "\"3181161784714000\"",
+                "id": "evt003",
+                "status": "tentative",
+                "summary": "Synthetic text 6",
+                "visibility": "confidential",
+                "start": {
+                  "dateTime": "2026-11-09T14:00:00Z"
+                },
+                "end": {
+                  "dateTime": "2026-11-09T15:00:00Z"
+                },
+                "iCalUID": "evt003@example.com",
+                "reminders": {
+                  "useDefault": false,
+                  "overrides": [
+                    {
+                      "method": "email",
+                      "minutes": 30
+                    }
+                  ]
+                },
+                "eventType": "default"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

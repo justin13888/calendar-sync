@@ -101,6 +101,14 @@ dependencies = [
 [[package]]
 name = "calendar-sync-google"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-engine",
+ "calendar-sync-ical",
+ "calendar-sync-model",
+ "calendar-sync-testkit",
+ "jiff",
+ "serde_json",
+]
 
 [[package]]
 name = "calendar-sync-graph"
@@ -109,6 +117,12 @@ version = "0.1.0"
 [[package]]
 name = "calendar-sync-ical"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "ical-rs",
+ "jiff",
+ "proptest",
+]
 
 [[package]]
 name = "calendar-sync-model"
@@ -256,6 +270,17 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+
+[[package]]
+name = "ical-rs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dbc009237124ae236eb886a57bda65357729b6b8ff7ad21113de2cea933e02a"
+dependencies = [
+ "jiff",
+ "jiff-tzdb",
+ "memchr",
+]
 
 [[package]]
 name = "indexmap"

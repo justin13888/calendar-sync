@@ -47,6 +47,14 @@ fixture it flags. `Fixture::redact` clears every finding, mapping each address t
 `personN@example.com`. The audit cannot recognise names or addresses in free text, so recorded
 event content is replaced with synthetic text before it is committed.
 
+`recorder::Recorder` is what a live probe records with. It keeps only the headers a replay needs
+(content type, `ETag` and the conditional-request headers, `Location`, `Retry-After`, and the
+`CalDAV` ones), so `Authorization` and cookies never enter a fixture. `Recorder::finish` replaces
+the free text of events (titles, descriptions, locations, names and comments in JSON; `SUMMARY`,
+`DESCRIPTION`, `LOCATION`, `COMMENT`, `CONTACT` and `CN` in iCalendar) with stable synthetic
+text, replaces Google's `htmlLink`, whose `eid` encodes the calendar's address, with a synthetic
+link, runs `Fixture::redact`, and refuses to return a fixture the audit still flags.
+
 The fixtures in `fixtures/` are synthetic examples of the format. Every file there is audited and
 replayed by `tests/fixtures.rs`.
 
