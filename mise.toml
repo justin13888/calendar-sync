@@ -97,6 +97,14 @@ run = "cargo xtask references verify"
 description = "Download every vendored reference again and compare it with its checksum"
 run = "cargo xtask references upstream"
 
+[tasks."gen:windows-zones"]
+description = "Generate the Graph crate's Windows time zone table from the vendored CLDR data"
+run = "cargo xtask gen-windows-zones"
+
+[tasks."gen:windows-zones:check"]
+description = "Check the Graph crate's Windows time zone table matches what the vendored CLDR data generates"
+run = "cargo xtask gen-windows-zones --check"
+
 [tasks."commits:check"]
 description = "Check every commit on the branch follows the commit convention"
 run = "cog check"
@@ -115,5 +123,6 @@ run = [
   "mise run msrv",
   "mise run semver",
   "mise run references:verify",
+  "mise run gen:windows-zones:check",
   "mise run commits:check",
 ]
