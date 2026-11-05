@@ -1,0 +1,35 @@
+{
+ "dateutil/testSecondlyIntervalLarge": {
+  "reason": "RFC 5545 section 3.3.10: INTERVAL is any positive integer. INTERVAL=90061 is 1 day, 1 hour, 1 minute and 1 second; calcard spaces the instances 24525 seconds apart, which is 90061 modulo 65536. dateutil agrees with the RFC",
+  "occurrences": [
+   ["1997-09-02T09:00:00Z", "1997-09-02T10:00:00Z"],
+   ["1997-09-03T10:01:01Z", "1997-09-03T11:01:01Z"],
+   ["1997-09-04T11:02:02Z", "1997-09-04T12:02:02Z"]
+  ]
+ },
+ "dateutil/testUntilEmpty": {
+  "reason": "RFC 5545 section 3.8.5.3: DTSTART defines the first instance. An UNTIL before it leaves the rule with no instances of its own; calcard refuses the whole event instead",
+  "occurrences": [
+   ["1997-09-02T09:00:00Z", "1997-09-02T10:00:00Z"]
+  ]
+ },
+ "this_and_future_new_length": {
+  "reason": "RFC 5545 section 3.8.4.4: with RANGE=THISANDFUTURE, 'if the duration of the given recurrence instance is modified, then all subsequence instances are also modified to have this same duration'. calcard keeps the master's hour for the later instances",
+  "occurrences": [
+   ["2024-01-01T10:00:00Z", "2024-01-01T11:00:00Z"],
+   ["2024-01-02T10:00:00Z", "2024-01-02T11:00:00Z"],
+   ["2024-01-03T12:00:00Z", "2024-01-03T12:30:00Z"],
+   ["2024-01-04T12:00:00Z", "2024-01-04T12:30:00Z"],
+   ["2024-01-05T12:00:00Z", "2024-01-05T12:30:00Z"]
+  ]
+ },
+ "tokyo_until_utc": {
+  "reason": "RFC 5545 section 3.3.10: an UNTIL synchronized with the rule 'becomes the last instance of the recurrence'. 2024-01-04T00:00:00Z is 09:00 in Asia/Tokyo, an instance; calcard drops it",
+  "occurrences": [
+   ["2024-01-01T00:00:00Z", "2024-01-01T00:30:00Z"],
+   ["2024-01-02T00:00:00Z", "2024-01-02T00:30:00Z"],
+   ["2024-01-03T00:00:00Z", "2024-01-03T00:30:00Z"],
+   ["2024-01-04T00:00:00Z", "2024-01-04T00:30:00Z"]
+  ]
+ }
+}

@@ -1,0 +1,37 @@
+# The cargo-fuzz workspace. It is its own workspace root, outside the main one, so nightly is
+# needed only here: `cargo +nightly fuzz run expand` from this directory. The scheduled workflow's
+# `fuzz-smoke` job runs it weekly on a pinned nightly.
+[package]
+name = "calendar-sync-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+arbitrary = { version = "1.5.0", features = ["derive"] }
+calendar-sync-ical = { path = "../crates/calendar-sync-ical" }
+calendar-sync-model = { path = "../crates/calendar-sync-model" }
+calendar-sync-recurrence = { path = "../crates/calendar-sync-recurrence" }
+jiff = { version = "0.2.39", default-features = false, features = ["std", "tzdb-bundle-always"] }
+libfuzzer-sys = "0.4.13"
+
+[[bin]]
+name = "expand"
+path = "fuzz_targets/expand.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ical_roundtrip"
+path = "fuzz_targets/ical_roundtrip.rs"
+test = false
+doc = false
+bench = false

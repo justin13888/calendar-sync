@@ -1,0 +1,161 @@
+{
+ "cases": [
+  {
+   "name": "floating_exdates",
+   "start": {"type": "floating", "dateTime": "1997-09-02T09:00:00"},
+   "end": {"type": "floating", "dateTime": "1997-09-02T10:00:00"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 5}}],
+   "excludedDates": [
+    {"type": "floating", "dateTime": "1997-09-03T09:00:00"},
+    {"type": "floating", "dateTime": "1997-09-05T09:00:00"}
+   ]
+  },
+  {
+   "name": "utc_exdate",
+   "start": {"type": "instant", "timestamp": "2024-01-01T10:00:00Z"},
+   "end": {"type": "instant", "timestamp": "2024-01-01T10:30:00Z"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 4}}],
+   "excludedDates": [{"type": "instant", "timestamp": "2024-01-02T10:00:00Z"}]
+  },
+  {
+   "name": "floating_rdates",
+   "start": {"type": "floating", "dateTime": "1997-09-02T09:00:00"},
+   "end": {"type": "floating", "dateTime": "1997-09-02T09:15:00"},
+   "rules": [{"frequency": "weekly", "end": {"type": "count", "count": 3}}],
+   "dates": [
+    {"type": "floating", "dateTime": "1997-09-05T09:00:00"},
+    {"type": "floating", "dateTime": "1997-09-20T15:00:00"}
+   ]
+  },
+  {
+   "name": "floating_moved_instance",
+   "start": {"type": "floating", "dateTime": "1997-09-02T09:00:00"},
+   "end": {"type": "floating", "dateTime": "1997-09-02T10:00:00"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 4}}],
+   "overrides": [
+    {
+     "key": {"type": "floating", "dateTime": "1997-09-03T09:00:00"},
+     "start": {"type": "floating", "dateTime": "1997-09-03T14:00:00"},
+     "end": {"type": "floating", "dateTime": "1997-09-03T15:00:00"}
+    }
+   ]
+  },
+  {
+   "name": "utc_moved_instance",
+   "start": {"type": "instant", "timestamp": "2024-01-01T10:00:00Z"},
+   "end": {"type": "instant", "timestamp": "2024-01-01T11:00:00Z"},
+   "rules": [{"frequency": "weekly", "end": {"type": "count", "count": 3}}],
+   "overrides": [
+    {
+     "key": {"type": "instant", "timestamp": "2024-01-08T10:00:00Z"},
+     "start": {"type": "instant", "timestamp": "2024-01-09T08:00:00Z"},
+     "end": {"type": "instant", "timestamp": "2024-01-09T09:00:00Z"}
+    }
+   ]
+  },
+  {
+   "name": "this_and_future_shift",
+   "start": {"type": "instant", "timestamp": "2024-01-01T10:00:00Z"},
+   "end": {"type": "instant", "timestamp": "2024-01-01T11:00:00Z"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 5}}],
+   "overrides": [
+    {
+     "key": {"type": "instant", "timestamp": "2024-01-03T10:00:00Z"},
+     "start": {"type": "instant", "timestamp": "2024-01-03T12:00:00Z"},
+     "end": {"type": "instant", "timestamp": "2024-01-03T13:00:00Z"},
+     "range": "thisAndFuture"
+    }
+   ]
+  },
+  {
+   "name": "this_and_future_new_length",
+   "start": {"type": "instant", "timestamp": "2024-01-01T10:00:00Z"},
+   "end": {"type": "instant", "timestamp": "2024-01-01T11:00:00Z"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 5}}],
+   "overrides": [
+    {
+     "key": {"type": "instant", "timestamp": "2024-01-03T10:00:00Z"},
+     "start": {"type": "instant", "timestamp": "2024-01-03T12:00:00Z"},
+     "end": {"type": "instant", "timestamp": "2024-01-03T12:30:00Z"},
+     "range": "thisAndFuture"
+    }
+   ]
+  },
+  {
+   "name": "all_day_yearly",
+   "start": {"type": "allDay", "date": "2020-02-28"},
+   "end": {"type": "allDay", "date": "2020-02-29"},
+   "rules": [{"frequency": "yearly", "end": {"type": "count", "count": 3}}]
+  },
+  {
+   "name": "all_day_exdate",
+   "start": {"type": "allDay", "date": "2024-03-01"},
+   "end": {"type": "allDay", "date": "2024-03-02"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 5}}],
+   "excludedDates": [{"type": "allDay", "date": "2024-03-03"}]
+  },
+  {
+   "name": "all_day_until",
+   "start": {"type": "allDay", "date": "2024-03-01"},
+   "end": {"type": "allDay", "date": "2024-03-03"},
+   "rules": [
+    {
+     "frequency": "weekly",
+     "end": {"type": "until", "until": {"type": "allDay", "date": "2024-03-22"}}
+    }
+   ]
+  },
+  {
+   "name": "tokyo_weekly_exdate",
+   "start": {"type": "zoned", "dateTime": "2024-01-01T09:00:00", "timeZone": "Asia/Tokyo"},
+   "end": {"type": "zoned", "dateTime": "2024-01-01T09:45:00", "timeZone": "Asia/Tokyo"},
+   "rules": [{"frequency": "weekly", "end": {"type": "count", "count": 4}}],
+   "excludedDates": [
+    {"type": "zoned", "dateTime": "2024-01-15T09:00:00", "timeZone": "Asia/Tokyo"}
+   ]
+  },
+  {
+   "name": "tokyo_until_utc",
+   "start": {"type": "zoned", "dateTime": "2024-01-01T09:00:00", "timeZone": "Asia/Tokyo"},
+   "end": {"type": "zoned", "dateTime": "2024-01-01T09:30:00", "timeZone": "Asia/Tokyo"},
+   "rules": [
+    {
+     "frequency": "daily",
+     "end": {"type": "until", "until": {"type": "instant", "timestamp": "2024-01-04T00:00:00Z"}}
+    }
+   ]
+  },
+  {
+   "name": "tokyo_moved_instance_utc_key",
+   "start": {"type": "zoned", "dateTime": "2024-01-01T09:00:00", "timeZone": "Asia/Tokyo"},
+   "end": {"type": "zoned", "dateTime": "2024-01-01T10:00:00", "timeZone": "Asia/Tokyo"},
+   "rules": [{"frequency": "daily", "end": {"type": "count", "count": 3}}],
+   "overrides": [
+    {
+     "key": {"type": "instant", "timestamp": "2024-01-02T00:00:00Z"},
+     "start": {"type": "zoned", "dateTime": "2024-01-02T15:00:00", "timeZone": "Asia/Tokyo"},
+     "end": {"type": "zoned", "dateTime": "2024-01-02T16:00:00", "timeZone": "Asia/Tokyo"}
+    }
+   ]
+  },
+  {
+   "name": "monthly_last_day",
+   "start": {"type": "floating", "dateTime": "2024-01-31T18:00:00"},
+   "end": {"type": "floating", "dateTime": "2024-01-31T19:00:00"},
+   "rules": [{"frequency": "monthly", "byMonthDay": [-1], "end": {"type": "count", "count": 4}}]
+  },
+  {
+   "name": "monthly_last_weekday",
+   "start": {"type": "floating", "dateTime": "2024-01-31T18:00:00"},
+   "end": {"type": "floating", "dateTime": "2024-01-31T19:00:00"},
+   "rules": [
+    {
+     "frequency": "monthly",
+     "byDay": [{"day": "mo"}, {"day": "tu"}, {"day": "we"}, {"day": "th"}, {"day": "fr"}],
+     "bySetPosition": [-1],
+     "end": {"type": "count", "count": 6}
+    }
+   ]
+  }
+ ]
+}
