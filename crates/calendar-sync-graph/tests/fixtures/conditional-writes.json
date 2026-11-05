@@ -1,0 +1,278 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic, from the documented formats: an update reads the event, compares its changeKey and patches only the subject; the same update again stops at the comparison; an update that also sends If-Match answers 412; a delete reads, compares and deletes; a second delete finds nothing",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/events/AAMkA001",
+        "headers": {
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-a2\"",
+            "id": "AAMkA001",
+            "changeKey": "ck-a2",
+            "type": "singleInstance",
+            "subject": "Synthetic text 1",
+            "body": {
+              "contentType": "text",
+              "content": ""
+            },
+            "start": {
+              "dateTime": "2026-11-05T16:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-05T17:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "importance": "high",
+            "categories": ["Synthetic text 12"],
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PATCH",
+        "url": "/v1.0/me/events/AAMkA001",
+        "headers": {
+          "content-type": "application/json",
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "subject": "Synthetic text 10"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-a3\"",
+            "id": "AAMkA001",
+            "changeKey": "ck-a3",
+            "type": "singleInstance",
+            "subject": "Synthetic text 10",
+            "body": {
+              "contentType": "text",
+              "content": ""
+            },
+            "start": {
+              "dateTime": "2026-11-05T16:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-05T17:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "importance": "high",
+            "categories": ["Synthetic text 12"],
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/events/AAMkA001"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-a3\"",
+            "id": "AAMkA001",
+            "changeKey": "ck-a3",
+            "type": "singleInstance",
+            "subject": "Synthetic text 10",
+            "start": {
+              "dateTime": "2026-11-05T16:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-05T17:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/events/AAMkA001"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-a3\"",
+            "id": "AAMkA001",
+            "changeKey": "ck-a3",
+            "type": "singleInstance",
+            "subject": "Synthetic text 10",
+            "start": {
+              "dateTime": "2026-11-05T16:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-05T17:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PATCH",
+        "url": "/v1.0/me/events/AAMkA001",
+        "headers": {
+          "content-type": "application/json",
+          "if-match": "W/\"ck-a3\""
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "subject": "Synthetic text 11"
+          }
+        }
+      },
+      "response": {
+        "status": 412,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": "ErrorIrresolvableConflict",
+              "message": "The change key passed in the request does not match the current change key for the item."
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/events/AAMkA001"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-a3\"",
+            "id": "AAMkA001",
+            "changeKey": "ck-a3",
+            "type": "singleInstance",
+            "subject": "Synthetic text 10",
+            "start": {
+              "dateTime": "2026-11-05T16:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-05T17:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/v1.0/me/events/AAMkA001"
+      },
+      "response": {
+        "status": 204
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/events/AAMkA001"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": "ErrorItemNotFound",
+              "message": "The specified object was not found in the store."
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic, from the documented formats: a delta link answers 410 Gone with syncStateNotFound, and the client starts a new round over the window",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?$deltatoken=delta002"
+      },
+      "response": {
+        "status": 410,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "error": {
+              "code": "syncStateNotFound",
+              "message": "The sync state was not found."
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?startDateTime=2026-11-01T00%3A00%3A00Z&endDateTime=2026-12-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+            "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=delta003",
+            "value": [
+              {
+                "@odata.type": "#microsoft.graph.event",
+                "@odata.etag": "W/\"ck-a2\"",
+                "id": "AAMkA001",
+                "changeKey": "ck-a2",
+                "type": "singleInstance",
+                "subject": "Synthetic text 1",
+                "start": {
+                  "dateTime": "2026-11-05T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-05T17:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

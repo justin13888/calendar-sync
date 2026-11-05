@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic, from the documented formats: a lookup of an idempotency key finds nothing, a create carries the key as its transactionId and an extended property, and a second lookup finds the event the create made",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendars/work/events?$filter=singleValueExtendedProperties%2Fany%28ep%3A%20ep%2Fid%20eq%20%27String%20%7B00020329-0000-0000-C000-000000000046%7D%20Name%20calendarSyncIdempotencyKey%27%20and%20ep%2Fvalue%20eq%20%27cseditckog%27%29",
+        "headers": {
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('person1%40example.com')/calendars('work')/events",
+            "value": []
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/v1.0/me/calendars/work/events",
+        "headers": {
+          "content-type": "application/json",
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.etag": "W/\"ck-n1\"",
+            "id": "AAMkN001",
+            "changeKey": "ck-n1",
+            "transactionId": "cseditckog",
+            "type": "singleInstance",
+            "subject": "Synthetic text 9",
+            "body": {
+              "contentType": "text",
+              "content": ""
+            },
+            "start": {
+              "dateTime": "2026-11-12T14:00:00.0000000",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-11-12T14:30:00.0000000",
+              "timeZone": "UTC"
+            },
+            "originalStartTimeZone": "Eastern Standard Time",
+            "originalEndTimeZone": "Eastern Standard Time",
+            "isAllDay": false,
+            "isCancelled": false,
+            "showAs": "busy",
+            "sensitivity": "normal",
+            "isReminderOn": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendars/work/events?$filter=singleValueExtendedProperties%2Fany%28ep%3A%20ep%2Fid%20eq%20%27String%20%7B00020329-0000-0000-C000-000000000046%7D%20Name%20calendarSyncIdempotencyKey%27%20and%20ep%2Fvalue%20eq%20%27cseditckog%27%29"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "value": [
+              {
+                "@odata.etag": "W/\"ck-n1\"",
+                "id": "AAMkN001",
+                "changeKey": "ck-n1",
+                "transactionId": "cseditckog",
+                "type": "singleInstance",
+                "subject": "Synthetic text 9",
+                "start": {
+                  "dateTime": "2026-11-12T14:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-12T14:30:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

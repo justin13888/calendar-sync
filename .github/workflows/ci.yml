@@ -221,6 +221,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       # Offline: checksums match, every file is listed, README and SHA256SUMS agree.
       - run: mise run references:verify
+      # The Graph crate's Windows time zone table is what the vendored CLDR data generates.
+      - run: mise run gen:windows-zones:check
 
   commits:
     name: commits

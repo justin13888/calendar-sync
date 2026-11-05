@@ -96,3 +96,28 @@ jobs:
           GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
         run: cargo test --locked -p calendar-sync-google --test live -- --ignored --nocapture
+
+  graph-live:
+    name: graph live probes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      # Probes a dedicated test mailbox through the Graph seam (crates/calendar-sync-graph,
+      # tests/live.rs), and reports what Graph does with a stale If-Match and a repeated
+      # transactionId. Until the probe account's secrets exist, the gate stays unset and the suite
+      # reports that it skipped.
+      - name: Probe Microsoft Graph
+        env:
+          CALENDAR_SYNC_GRAPH_LIVE: ${{ secrets.GRAPH_REFRESH_TOKEN != '' && '1' || '' }}
+          GRAPH_CALENDAR_ID: ${{ secrets.GRAPH_CALENDAR_ID }}
+          GRAPH_TENANT: ${{ secrets.GRAPH_TENANT }}
+          GRAPH_CLIENT_ID: ${{ secrets.GRAPH_CLIENT_ID }}
+          GRAPH_CLIENT_SECRET: ${{ secrets.GRAPH_CLIENT_SECRET }}
+          GRAPH_REFRESH_TOKEN: ${{ secrets.GRAPH_REFRESH_TOKEN }}
+        run: cargo test --locked -p calendar-sync-graph --test live -- --ignored --nocapture

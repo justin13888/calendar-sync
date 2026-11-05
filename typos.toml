@@ -1,2 +1,13 @@
 [files]
-extend-exclude = ["LICENSE-*", "Cargo.lock", "target/", "references/"]
+extend-exclude = [
+  "LICENSE-*",
+  "Cargo.lock",
+  "target/",
+  "references/",
+  # Generated from CLDR: Windows zone names such as "FLE Standard Time" are not misspellings.
+  "crates/calendar-sync-graph/src/windows_zones.rs",
+]
+
+[default.extend-words]
+# The Windows zone "FLE Standard Time" (Finland, Lithuania, Estonia), named in tests and docs.
+FLE = "FLE"
