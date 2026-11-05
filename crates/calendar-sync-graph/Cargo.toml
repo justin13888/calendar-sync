@@ -15,5 +15,15 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
 # Unpublished until this crate's release issue.
 publish = false
 
+[dependencies]
+calendar-sync-engine.workspace = true
+calendar-sync-model.workspace = true
+# `tzdb-bundle-always` compiles in the IANA database that zoned times are read with, never a file.
+jiff = { workspace = true, features = ["tzdb-bundle-always"] }
+serde_json.workspace = true
+
+[dev-dependencies]
+calendar-sync-testkit.workspace = true
+
 [lints]
 workspace = true
