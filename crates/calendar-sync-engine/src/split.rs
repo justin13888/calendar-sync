@@ -4,14 +4,18 @@
 //! one is two series: the old one, ended just before the instance, and a new one from it. The
 //! planner writes them in this order:
 //!
-//! 1. **Create** the new series' master, under ids derived from the [`Split`].
-//! 2. **Carry** each override at or after the split to the new series, one at a time.
+//! 1. **Create** the new series' master, under ids derived from the [`Split`]. The old series'
+//!    cancelled instances and excluded dates at or after the split are excluded dates of the new
+//!    master from the start, so no cancelled instance shows again in between.
+//! 2. **Carry** each modified override at or after the split to the new series, one at a time.
 //! 3. **Trim** the old master: every rule ends before the split, and its extra dates at or after
 //!    the split are dropped.
 //! 4. **Remove** each override at or after the split from the old series, one at a time.
 //!
 //! Until step 3, every occurrence at or after the split shows in both series: a crash leaves a
-//! visible duplicate, never a lost occurrence. Nothing is removed from the old series until the
+//! visible duplicate, never a lost occurrence, and never a cancelled one shown again. Between a
+//! create and the carry of a modified instance, the new series shows that instance unmodified
+//! beside the old series' modified one. Nothing is removed from the old series until the
 //! new one holds everything carried to it.
 //!
 //! # Recovering
@@ -31,8 +35,9 @@
 //! An override keeps its own fields. Where the new series starts at another time than the
 //! instance it was split at, every carried key moves by the same amount, and so does an
 //! override's own time where it had not been moved from its instance: civil time where the key is
-//! in the split instance's frame, elapsed time otherwise. Extra and excluded dates at or after the
-//! split move the same way into the new series' recurrence, where it has one. An override that
+//! in the split instance's frame, elapsed time otherwise. Extra dates, excluded dates and cancelled
+//! instances at or after the split move the same way into the new series' recurrence, where it
+//! has one. An override that
 //! cannot be moved, because an all-day series became a timed one or the reverse, is not carried,
 //! and [`SplitStep::Create`] names it, so the application can report it.
 //!
@@ -49,8 +54,9 @@
 //! ```
 
 use calendar_sync_model::{
-    EventSeries, EventTimes, InstanceKey, NormalizedEvent, Override, Passthrough, ProviderEvent,
-    ProviderIds, ProviderRevision, Recurrence, RecurrenceRule, RuleEnd, TimeValue, TimeZoneId,
+    EventSeries, EventTimes, InstanceKey, InstanceRange, NormalizedEvent, Override, Passthrough,
+    ProviderEvent, ProviderIds, ProviderRevision, Recurrence, RecurrenceRule, RuleEnd, TimeValue,
+    TimeZoneId,
 };
 use calendar_sync_recurrence::{CivilRule, ZoneSource};
 use jiff::civil::{Date, DateTime, Time};
@@ -89,7 +95,9 @@ impl Split {
     }
 
     /// The edit id the new series is created under. It encodes the whole split, so the ids
-    /// derived from it ([`Split::ids`]) name it, and two splits never share them.
+    /// derived from it ([`Split::ids`]) name it, and two splits never share them. Google accepts
+    /// the derived id while this is at most 636 bytes: the series id, the edit id and the
+    /// instance together, with about 40 bytes besides.
     #[must_use]
     pub fn create_edit(&self) -> EditId {
         let mut text = String::from(TAG);
@@ -183,14 +191,16 @@ pub enum SplitStep {
         /// changed between all-day and timed. They end with the old series.
         uncarried: Vec<InstanceKey>,
     },
-    /// Add an override to the new series.
+    /// Add a modified instance to the new series.
     Carry {
         /// The new series' master resource.
         series: ResourceId,
         /// The instance it overrides in the new series.
         instance: InstanceKey,
-        /// The override. A modified instance's ids name the new series and carry no revision.
-        value: Override,
+        /// The instance's fields. Its ids name the new series, and it carries no revision.
+        event: ProviderEvent,
+        /// Which instances it applies to, as in the old series.
+        range: InstanceRange,
     },
     /// Replace the old master's fields, conditional on its revision.
     Trim {
@@ -293,6 +303,10 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
             let shift = self.shift(&split.at, new_master.fields.times.start());
             for (key, value) in &later {
                 let Some(shift) = &shift else { break };
+                // A cancelled instance went into the new master's excluded dates.
+                let Override::Modified { event, range } = value else {
+                    continue;
+                };
                 let Some(moved) = self.shift_value(key.original_start(), shift) else {
                     continue;
                 };
@@ -301,7 +315,8 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
                     return Ok(SplitStep::Carry {
                         series: ResourceId::of(new_master),
                         instance: moved,
-                        value: self.carried(value, key, shift, new_master),
+                        event: self.carried(event, key, shift, new_master),
+                        range: *range,
                     });
                 }
             }
@@ -350,8 +365,15 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
                     }
                 }
             };
+            let cancelled: Vec<TimeValue> = old
+                .overrides
+                .iter()
+                .filter(|(_, value)| matches!(value, Override::Cancelled { .. }))
+                .map(|(key, _)| key.original_start().clone())
+                .collect();
             carry(&theirs.dates, &mut ours.dates);
             carry(&theirs.excluded_dates, &mut ours.excluded_dates);
+            carry(&cancelled, &mut ours.excluded_dates);
         }
         let uncarried = match &shift {
             Some(_) => Vec::new(),
@@ -405,41 +427,30 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
             .collect())
     }
 
-    /// `value`, an override of the old series at `key`, as the new series holds it.
+    /// `event`, a modified instance of the old series at `key`, as the new series holds it.
     fn carried(
         &self,
-        value: &Override,
+        event: &ProviderEvent,
         key: &InstanceKey,
         shift: &Shift,
         new_master: &ProviderEvent,
-    ) -> Override {
-        match value {
-            Override::Cancelled { .. } => Override::Cancelled {
-                ids: None,
-                revision: None,
-            },
-            Override::Modified { event, range } => {
-                let mut event = event.as_ref().clone();
-                event.ids = ProviderIds {
-                    provider: new_master.ids.provider,
-                    id: new_master.ids.id.clone(),
-                    ical_uid: new_master.ids.ical_uid.clone(),
-                    series_id: Some(new_master.ids.id.clone()),
-                };
-                event.revision = None;
-                // An instance the user moved stays where they put it; one they did not moves
-                // with the series.
-                if event.fields.times.start() == key.original_start()
-                    && let Some(times) = self.shift_times(&event.fields.times, shift)
-                {
-                    event.fields.times = times;
-                }
-                Override::Modified {
-                    event: Box::new(event),
-                    range: *range,
-                }
-            }
+    ) -> ProviderEvent {
+        let mut event = event.clone();
+        event.ids = ProviderIds {
+            provider: new_master.ids.provider,
+            id: new_master.ids.id.clone(),
+            ical_uid: new_master.ids.ical_uid.clone(),
+            series_id: Some(new_master.ids.id.clone()),
+        };
+        event.revision = None;
+        // An instance the user moved stays where they put it; one they did not moves with the
+        // series.
+        if event.fields.times.start() == key.original_start()
+            && let Some(times) = self.shift_times(&event.fields.times, shift)
+        {
+            event.fields.times = times;
         }
+        event
     }
 
     /// `fields` with every rule ended before `at`, and every extra date at or after it dropped.
