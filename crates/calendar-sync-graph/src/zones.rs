@@ -8,14 +8,56 @@ use jiff::tz::{TimeZone, TimeZoneDatabase};
 
 use crate::windows_zones::{IANA_TO_WINDOWS, WINDOWS_TO_IANA};
 
+/// The zones CLDR's `windowsZones.xml` names by an id the IANA database now keeps only as a
+/// backward link, with no entry under the current name: `(current IANA name, CLDR id)`. CLDR
+/// keeps its ids stable across IANA renames, so its table cannot say this itself.
+const RENAMED: [(&str, &str); 18] = [
+    ("Africa/Asmara", "Africa/Asmera"),
+    ("America/Argentina/Buenos_Aires", "America/Buenos_Aires"),
+    ("America/Argentina/Catamarca", "America/Catamarca"),
+    ("America/Argentina/Cordoba", "America/Cordoba"),
+    ("America/Argentina/Jujuy", "America/Jujuy"),
+    ("America/Argentina/Mendoza", "America/Mendoza"),
+    ("America/Indiana/Indianapolis", "America/Indianapolis"),
+    ("America/Kentucky/Louisville", "America/Louisville"),
+    ("America/Nuuk", "America/Godthab"),
+    ("Asia/Ho_Chi_Minh", "Asia/Saigon"),
+    ("Asia/Kathmandu", "Asia/Katmandu"),
+    ("Asia/Kolkata", "Asia/Calcutta"),
+    ("Asia/Yangon", "Asia/Rangoon"),
+    ("Atlantic/Faroe", "Atlantic/Faeroe"),
+    ("Europe/Kyiv", "Europe/Kiev"),
+    ("Pacific/Chuuk", "Pacific/Truk"),
+    ("Pacific/Kanton", "Pacific/Enderbury"),
+    ("Pacific/Pohnpei", "Pacific/Ponape"),
+];
+
+/// The id CLDR lists the IANA zone `iana` under: its CLDR id where CLDR keeps an older name.
+fn cldr_id(iana: &str) -> &str {
+    RENAMED
+        .iter()
+        .find(|(current, _)| *current == iana)
+        .map_or(iana, |(_, cldr)| cldr)
+}
+
+/// The current IANA name for the CLDR id `cldr`.
+fn current_name(cldr: &'static str) -> &'static str {
+    RENAMED
+        .iter()
+        .find(|(_, old)| *old == cldr)
+        .map_or(cldr, |(current, _)| current)
+}
+
 /// The IANA zone CLDR gives the Windows zone `windows` for territory `001`, compared without
-/// regard to case. `None` for a name CLDR does not list.
+/// regard to case, under its current IANA name where CLDR keeps an older one. `None` for a name
+/// CLDR does not list.
 ///
 /// ```
 /// assert_eq!(
 ///     calendar_sync_graph::iana_zone("Pacific Standard Time"),
 ///     Some("America/Los_Angeles")
 /// );
+/// assert_eq!(calendar_sync_graph::iana_zone("India Standard Time"), Some("Asia/Kolkata"));
 /// assert_eq!(calendar_sync_graph::iana_zone("America/Los_Angeles"), None);
 /// ```
 #[must_use]
@@ -23,19 +65,22 @@ pub fn iana_zone(windows: &str) -> Option<&'static str> {
     WINDOWS_TO_IANA
         .iter()
         .find(|(name, _)| name.eq_ignore_ascii_case(windows))
-        .map(|(_, iana)| *iana)
+        .map(|(_, iana)| current_name(iana))
 }
 
-/// The Windows zone CLDR lists the IANA zone `iana` under. `None` for a zone CLDR does not list.
+/// The Windows zone CLDR lists the IANA zone `iana` under, by its current name or by the older
+/// one CLDR keeps. `None` for a zone CLDR does not list.
 ///
 /// ```
 /// assert_eq!(
 ///     calendar_sync_graph::windows_zone("America/Toronto"),
 ///     Some("Eastern Standard Time")
 /// );
+/// assert_eq!(calendar_sync_graph::windows_zone("Europe/Kyiv"), Some("FLE Standard Time"));
 /// ```
 #[must_use]
 pub fn windows_zone(iana: &str) -> Option<&'static str> {
+    let iana = cldr_id(iana);
     IANA_TO_WINDOWS
         .binary_search_by(|(name, _)| (*name).cmp(iana))
         .ok()
@@ -86,7 +131,7 @@ pub(crate) fn graph_name(iana: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::{graph_name, iana_zone, is_utc, resolve, windows_zone};
+    use super::{RENAMED, current_name, graph_name, iana_zone, is_utc, resolve, windows_zone};
     use crate::windows_zones::{IANA_TO_WINDOWS, WINDOWS_TO_IANA};
 
     #[test]
@@ -97,10 +142,39 @@ mod tests {
         for (windows, iana) in WINDOWS_TO_IANA {
             let (name, _) = resolve(windows).unwrap_or_else(|| panic!("{windows}"));
             // `UTC` is a Windows name and an IANA name both.
-            assert!(name == iana || name == windows, "{windows}: {name}");
+            assert!(
+                name == current_name(iana) || name == windows,
+                "{windows}: {name}"
+            );
             assert!(super::iana(iana).is_some(), "{iana}");
             assert_eq!(windows_zone(iana), Some(windows), "{iana}");
         }
+    }
+
+    #[test]
+    fn renamed_zones_map_both_ways() {
+        assert!(RENAMED.windows(2).all(|pair| pair[0].0 < pair[1].0));
+        for (current, cldr) in RENAMED {
+            // CLDR lists the old id and not the current one, and both are in the database.
+            assert!(windows_zone(cldr).is_some(), "{cldr}");
+            assert!(
+                IANA_TO_WINDOWS.iter().all(|(name, _)| *name != current),
+                "{current}"
+            );
+            assert!(super::iana(current).is_some(), "{current}");
+            assert_eq!(windows_zone(current), windows_zone(cldr), "{current}");
+            assert_eq!(
+                graph_name(current),
+                windows_zone(cldr).unwrap(),
+                "{current}"
+            );
+        }
+        assert_eq!(graph_name("Asia/Kolkata"), "India Standard Time");
+        assert_eq!(graph_name("Asia/Calcutta"), "India Standard Time");
+        assert_eq!(iana_zone("India Standard Time"), Some("Asia/Kolkata"));
+        assert_eq!(iana_zone("FLE Standard Time"), Some("Europe/Kyiv"));
+        assert_eq!(resolve("Nepal Standard Time").unwrap().0, "Asia/Kathmandu");
+        assert_eq!(resolve("SE Asia Standard Time").unwrap().0, "Asia/Bangkok");
     }
 
     #[test]
