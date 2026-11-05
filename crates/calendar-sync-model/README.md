@@ -15,6 +15,15 @@ It holds:
 
 Everything serializes with `serde`. The model stays close to JSCalendar (RFC 8984); the crate docs list each deliberate divergence.
 
-**Status: unreleased.** Part of [calendar-sync](https://github.com/justin13888/calendar-sync).
+```toml
+[dependencies]
+calendar-sync-model = "0.1"
+```
+
+Part of [calendar-sync](https://github.com/justin13888/calendar-sync). API docs are on [docs.rs](https://docs.rs/calendar-sync-model).
+
+## Versioning
+
+0.x: a minor release (0.1 to 0.2) may break the API, and a patch release never does. The minimum supported Rust version is 1.91, raised only in a minor release. The full policy is in [docs/semver.md](https://github.com/justin13888/calendar-sync/blob/master/docs/semver.md).
 
 Licensed under MIT or Apache-2.0, at your option.

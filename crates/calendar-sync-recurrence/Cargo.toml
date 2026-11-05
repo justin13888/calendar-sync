@@ -8,12 +8,13 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-keywords.workspace = true
-categories.workspace = true
+documentation = "https://docs.rs/calendar-sync-recurrence"
+keywords = ["calendar", "recurrence", "rrule", "icalendar", "rfc5545"]
+categories = ["date-and-time"]
 readme = "README.md"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
-# Unpublished until this crate's release issue.
-publish = false
+# docs/semver.md: the 0.x and MSRV policy this crate is released under.
+publish = true
 
 [dependencies]
 calendar-sync-model.workspace = true
