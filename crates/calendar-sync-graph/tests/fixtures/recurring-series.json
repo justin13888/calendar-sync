@@ -1,0 +1,139 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic, from the documented formats: a delta round holding a weekly series master, an unchanged occurrence, an exception moved by an hour, and a cancelled instance",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?startDateTime=2026-11-01T00%3A00%3A00Z&endDateTime=2026-12-01T00%3A00%3A00Z"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=delta101",
+            "value": [
+              {
+                "@odata.etag": "W/\"ck-s1\"",
+                "id": "AAMkS001",
+                "changeKey": "ck-s1",
+                "type": "seriesMaster",
+                "subject": "Synthetic text 13",
+                "start": {
+                  "dateTime": "2026-11-03T15:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-03T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false,
+                "recurrence": {
+                  "pattern": {
+                    "type": "weekly",
+                    "interval": 1,
+                    "month": 0,
+                    "dayOfMonth": 0,
+                    "daysOfWeek": ["tuesday"],
+                    "firstDayOfWeek": "sunday",
+                    "index": "first"
+                  },
+                  "range": {
+                    "type": "endDate",
+                    "startDate": "2026-11-03",
+                    "endDate": "2026-11-24",
+                    "recurrenceTimeZone": "Eastern Standard Time",
+                    "numberOfOccurrences": 0
+                  }
+                }
+              },
+              {
+                "@odata.etag": "W/\"ck-o1\"",
+                "id": "AAMkS001-o1",
+                "changeKey": "ck-o1",
+                "type": "occurrence",
+                "seriesMasterId": "AAMkS001",
+                "originalStart": "2026-11-03T15:00:00Z",
+                "subject": "Synthetic text 13",
+                "start": {
+                  "dateTime": "2026-11-03T15:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-03T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false
+              },
+              {
+                "@odata.etag": "W/\"ck-x1\"",
+                "id": "AAMkS001-x1",
+                "changeKey": "ck-x1",
+                "type": "exception",
+                "seriesMasterId": "AAMkS001",
+                "originalStart": "2026-11-10T15:00:00Z",
+                "subject": "Synthetic text 14",
+                "start": {
+                  "dateTime": "2026-11-10T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-10T17:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false
+              },
+              {
+                "@odata.etag": "W/\"ck-x2\"",
+                "id": "AAMkS001-x2",
+                "changeKey": "ck-x2",
+                "type": "exception",
+                "seriesMasterId": "AAMkS001",
+                "originalStart": "2026-11-17T15:00:00Z",
+                "subject": "Synthetic text 13",
+                "start": {
+                  "dateTime": "2026-11-17T15:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-17T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": true,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "isReminderOn": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

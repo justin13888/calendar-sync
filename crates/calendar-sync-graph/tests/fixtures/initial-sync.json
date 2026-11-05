@@ -1,0 +1,171 @@
+{
+  "format": 1,
+  "provider": "graph",
+  "description": "Synthetic, from the documented formats: a first delta round over a window, two events a page, ending with a delta link",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?startDateTime=2026-11-01T00%3A00%3A00Z&endDateTime=2026-12-01T00%3A00%3A00Z",
+        "headers": {
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\", odata.maxpagesize=2"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$skiptoken=skip001",
+            "value": [
+              {
+                "@odata.type": "#microsoft.graph.event",
+                "@odata.etag": "W/\"ck-a1\"",
+                "id": "AAMkA001",
+                "changeKey": "ck-a1",
+                "iCalUId": "040000008200E00074C5B7101A82E0080000000001",
+                "type": "singleInstance",
+                "subject": "Synthetic text 1",
+                "body": {
+                  "contentType": "text",
+                  "content": "Synthetic text 2"
+                },
+                "location": {
+                  "displayName": "Synthetic text 3",
+                  "locationType": "default"
+                },
+                "start": {
+                  "dateTime": "2026-11-05T15:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-05T16:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Eastern Standard Time",
+                "originalEndTimeZone": "Eastern Standard Time",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "busy",
+                "sensitivity": "normal",
+                "importance": "normal",
+                "isReminderOn": true,
+                "reminderMinutesBeforeStart": 15,
+                "organizer": {
+                  "emailAddress": {
+                    "name": "Synthetic text 4",
+                    "address": "person1@example.com"
+                  }
+                },
+                "attendees": [
+                  {
+                    "type": "required",
+                    "status": {
+                      "response": "accepted",
+                      "time": "2026-11-01T12:00:00Z"
+                    },
+                    "emailAddress": {
+                      "name": "Synthetic text 5",
+                      "address": "person2@example.com"
+                    }
+                  },
+                  {
+                    "type": "optional",
+                    "status": {
+                      "response": "none",
+                      "time": "0001-01-01T00:00:00Z"
+                    },
+                    "emailAddress": {
+                      "address": "person3@example.com"
+                    }
+                  }
+                ]
+              },
+              {
+                "@odata.type": "#microsoft.graph.event",
+                "@odata.etag": "W/\"ck-b1\"",
+                "id": "AAMkB001",
+                "changeKey": "ck-b1",
+                "iCalUId": "040000008200E00074C5B7101A82E0080000000002",
+                "type": "singleInstance",
+                "subject": "Synthetic text 6",
+                "body": {
+                  "contentType": "text",
+                  "content": ""
+                },
+                "start": {
+                  "dateTime": "2026-11-06T00:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-07T00:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "Pacific Standard Time",
+                "originalEndTimeZone": "Pacific Standard Time",
+                "isAllDay": true,
+                "isCancelled": false,
+                "showAs": "free",
+                "sensitivity": "normal",
+                "isReminderOn": false,
+                "reminderMinutesBeforeStart": 1080
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1.0/me/calendarView/delta?$skiptoken=skip001",
+        "headers": {
+          "prefer": "IdType=\"ImmutableId\", outlook.timezone=\"UTC\", outlook.body-content-type=\"text\", odata.maxpagesize=2"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; odata.metadata=minimal"
+        },
+        "body": {
+          "kind": "json",
+          "content": {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+            "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=delta001",
+            "value": [
+              {
+                "@odata.type": "#microsoft.graph.event",
+                "@odata.etag": "W/\"ck-c1\"",
+                "id": "AAMkC001",
+                "changeKey": "ck-c1",
+                "iCalUId": "040000008200E00074C5B7101A82E0080000000003",
+                "type": "singleInstance",
+                "subject": "Synthetic text 7",
+                "start": {
+                  "dateTime": "2026-11-09T14:00:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-11-09T14:30:00.0000000",
+                  "timeZone": "UTC"
+                },
+                "originalStartTimeZone": "UTC",
+                "originalEndTimeZone": "UTC",
+                "isAllDay": false,
+                "isCancelled": false,
+                "showAs": "tentative",
+                "sensitivity": "private",
+                "isReminderOn": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
