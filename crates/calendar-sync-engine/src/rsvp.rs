@@ -9,7 +9,7 @@
 //!
 //! | Provider | Plan | Precondition | [`DuplicateRisk`] |
 //! |---|---|---|---|
-//! | Google | [`RsvpPlan::Google`]: `PATCH` of the whole `attendees` array, with only the replier's entries changed | `If-Match` on the etag | [`DuplicateRisk::None`]; [`DuplicateRisk::SecondReply`] for a record with no etag |
+//! | Google | [`RsvpPlan::Google`]: `PATCH` of the whole `attendees` array, with only the replier's entries changed and each entry's kept fields sent back | `If-Match` on the etag | [`DuplicateRisk::None`]; [`DuplicateRisk::SecondReply`] for a record with no etag |
 //! | Microsoft Graph | [`RsvpPlan::Graph`]: `POST` `accept`, `decline` or `tentativelyAccept` | None: the actions are not documented as conditional or idempotent | [`DuplicateRisk::SecondReply`] |
 //! | `CalDAV` | [`RsvpPlan::CalDav`]: `PUT` of the object with the replier's `PARTSTAT` changed, through `calendar_sync_ical::IcalDocument::reply` | `If-Schedule-Tag-Match` (RFC 6638 section 3.2.10) | [`DuplicateRisk::None`] |
 //!
@@ -223,7 +223,9 @@ pub enum RsvpPlan {
     Done,
     /// Google: `events.patch` of the resource with `attendees` as the whole array, under
     /// `If-Match`. Google replaces an array whole on a patch, so every entry is sent, each as the
-    /// provider holds it, and only the replier's participation differs.
+    /// provider holds it, and only the replier's participation differs. An entry as the provider
+    /// holds it is its [`Attendee`] together with its fields in `passthrough`: the sender writes
+    /// both, as `calendar_sync_google::event::write` does, or the patch erases those fields.
     Google {
         /// The event, or the instance, replied to.
         resource: ResourceId,
@@ -232,6 +234,10 @@ pub enum RsvpPlan {
         if_match: Option<ProviderRevision>,
         /// The whole attendee array to send.
         attendees: Vec<Attendee>,
+        /// The attendee fields the model has no place for, as the record kept them: every
+        /// `attendees[EMAIL].NAME` entry of its passthrough, in order. The sender writes each
+        /// into the entry for `EMAIL`.
+        passthrough: Passthrough,
     },
     /// Microsoft Graph: `POST /me/events/{id}/{action}`, with no precondition.
     Graph {
@@ -420,6 +426,12 @@ pub fn plan(
                     }
                     attendee
                 })
+                .collect(),
+            passthrough: current
+                .passthrough
+                .iter()
+                .filter(|field| field.name.starts_with("attendees["))
+                .cloned()
                 .collect(),
         },
         RsvpTarget::Graph => RsvpPlan::Graph {

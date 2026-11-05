@@ -198,12 +198,14 @@ fn send_google(google: &mut FakeGoogle, current: &ProviderEvent, plan: &RsvpPlan
         resource,
         if_match,
         attendees,
+        passthrough,
     } = plan
     else {
         panic!("expected a Google plan, got {plan:?}");
     };
     let mut event = current.clone();
     event.fields.attendees.clone_from(attendees);
+    event.passthrough.clone_from(passthrough);
     GoogleSeam::new(None).perform(
         google,
         &Request::Update {
@@ -313,6 +315,44 @@ fn google_without_an_etag_writes_unconditionally_and_says_so() {
     .unwrap();
     assert!(matches!(plan, RsvpPlan::Google { if_match: None, .. }));
     assert_eq!(plan.duplicate_risk(), DuplicateRisk::SecondReply);
+}
+
+#[test]
+fn google_carries_every_attendee_field_the_model_does_not_hold() {
+    let mut kept = Passthrough::new();
+    kept.push("colorId", "\"7\"");
+    kept.push("attendees[carol@example.com].comment", "\"Running late\"");
+    kept.push("organizer.self", "false");
+    kept.push("attendees[alice@example.com].additionalGuests", "2");
+    let current = ProviderEvent {
+        ids: ProviderIds::new(Provider::Google, "review"),
+        revision: Some(ProviderRevision::new("\"3\"")),
+        mapper_version: MAPPER_VERSION,
+        fields: meeting(),
+        passthrough: kept,
+    };
+    let plan = rsvp::plan(
+        &Rsvp::new(BOB, Reply::Accept),
+        &current,
+        &RsvpTarget::Google,
+    )
+    .unwrap();
+    let RsvpPlan::Google { passthrough, .. } = &plan else {
+        panic!("expected a Google plan, got {plan:?}");
+    };
+    // Other attendees' fields go with the whole array, so the patch erases none of them; fields
+    // outside the array are not part of the patch.
+    let names: Vec<(&str, &str)> = passthrough
+        .iter()
+        .map(|field| (field.name.as_str(), field.raw.as_str()))
+        .collect();
+    assert_eq!(
+        names,
+        [
+            ("attendees[carol@example.com].comment", "\"Running late\""),
+            ("attendees[alice@example.com].additionalGuests", "2"),
+        ]
+    );
 }
 
 // Graph
