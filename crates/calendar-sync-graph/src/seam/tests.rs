@@ -442,7 +442,7 @@ fn an_update_reads_compares_and_patches_only_what_changed() {
         &mut exchange,
         vec![json_response(200, &current), json_response(412, &json!({}))],
     );
-    assert_eq!(sent[1].header("if-match"), Some("k1"));
+    assert_eq!(sent[1].header("if-match"), Some("W/\"k1\""));
     assert_eq!(
         exchange.into_outcome(),
         Outcome::Failed(Failure::PreconditionFailed)
@@ -506,7 +506,7 @@ fn if_match_alone_patches_everything_in_one_call() {
     );
     assert_eq!(sent.len(), 1);
     assert_eq!(sent[0].method, Method::Patch);
-    assert_eq!(sent[0].header("if-match"), Some("k1"));
+    assert_eq!(sent[0].header("if-match"), Some("W/\"k1\""));
     let patch: Value = serde_json::from_str(sent[0].body.as_deref().unwrap()).unwrap();
     assert_eq!(patch["subject"], "After");
     assert!(patch.get("start").is_some() && patch.get("showAs").is_some());
@@ -544,7 +544,7 @@ fn a_delete_reads_compares_and_deletes() {
         .with_precondition(Precondition::IfMatch)
         .call(&delete);
     let sent = drive(&mut exchange, vec![json_response(404, &json!({}))]);
-    assert_eq!(sent[0].header("if-match"), Some("k1"));
+    assert_eq!(sent[0].header("if-match"), Some("W/\"k1\""));
     assert_eq!(exchange.into_outcome(), Outcome::Failed(Failure::NotFound));
 
     // An unconditional delete skips the comparison but still reads.

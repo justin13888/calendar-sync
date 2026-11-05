@@ -182,7 +182,7 @@
         "url": "/v1.0/me/events/AAMkA001",
         "headers": {
           "content-type": "application/json",
-          "if-match": "ck-a3"
+          "if-match": "W/\"ck-a3\""
         },
         "body": {
           "kind": "json",

@@ -46,7 +46,8 @@ pub enum Precondition {
     /// without `If-Match`. The default.
     #[default]
     ReadCompare,
-    /// As [`Precondition::ReadCompare`], and send `If-Match` with the `changeKey` as well.
+    /// As [`Precondition::ReadCompare`], and send `If-Match` as well, carrying the `changeKey` as
+    /// Graph's weak entity tag `W/"<changeKey>"` (the `@odata.etag` form).
     ReadCompareIfMatch,
     /// Send `If-Match` alone, without a read: one request, but the `PATCH` carries every property
     /// this mapping writes, since there is no read to compare it with.
@@ -282,7 +283,7 @@ impl GraphSeam {
         let mut headers = self.headers(false);
         headers.push(("Content-Type".to_owned(), "application/json".to_owned()));
         if let Some(revision) = if_match {
-            headers.push(("If-Match".to_owned(), revision.as_str().to_owned()));
+            headers.push(("If-Match".to_owned(), entity_tag(revision)));
         }
         headers
     }
@@ -318,7 +319,7 @@ impl GraphSeam {
     fn delete(&self, id: &ResourceId, if_match: Option<&ProviderRevision>) -> HttpRequest {
         let mut headers = self.headers(false);
         if let Some(revision) = if_match {
-            headers.push(("If-Match".to_owned(), revision.as_str().to_owned()));
+            headers.push(("If-Match".to_owned(), entity_tag(revision)));
         }
         HttpRequest {
             method: Method::Delete,
@@ -327,6 +328,12 @@ impl GraphSeam {
             body: None,
         }
     }
+}
+
+/// The `If-Match` value for a `changeKey`: Graph's weak entity tag `W/"<changeKey>"`, the form
+/// it returns as `@odata.etag` (RFC 9110 `entity-tag`), rather than the bare `changeKey`.
+fn entity_tag(revision: &ProviderRevision) -> String {
+    format!("W/\"{}\"", revision.as_str())
 }
 
 fn refused(written: &event::WrittenEvent) -> Outcome {
