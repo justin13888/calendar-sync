@@ -90,6 +90,7 @@ version = "0.1.0"
 name = "calendar-sync-engine"
 version = "0.1.0"
 dependencies = [
+ "calendar-sync-ical",
  "calendar-sync-model",
  "calendar-sync-recurrence",
  "calendar-sync-testkit",
