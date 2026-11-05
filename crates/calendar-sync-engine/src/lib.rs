@@ -14,6 +14,8 @@
 //!   device names the same resource.
 //! - [`merge`]: the three-way merge of one event at push time, field by field, with
 //!   organizer and attendee ownership.
+//! - [`split`]: "this and following" as a series split: the new series created first, the old
+//!   one trimmed after, every step recoverable from what the provider holds.
 //!
 //! ```
 //! use calendar_sync_engine::{Effect, Input, ListFrom, Request, SyncState, step};
@@ -30,6 +32,7 @@
 pub mod ids;
 pub mod merge;
 pub mod seam;
+pub mod split;
 pub mod sync;
 
 pub use ids::DerivedIds;
@@ -38,4 +41,5 @@ pub use seam::{
     Change, Cursor, Failure, ListFrom, Next, Outcome, Page, ProviderSeam, Request, RequestId,
     ResourceId,
 };
+pub use split::{Split, SplitError, SplitStep, Splitter};
 pub use sync::{Edit, EditId, Effect, Input, Notice, Operation, Rejection, SyncState, step};
