@@ -91,6 +91,7 @@ name = "calendar-sync-engine"
 version = "0.1.0"
 dependencies = [
  "calendar-sync-model",
+ "calendar-sync-recurrence",
  "calendar-sync-testkit",
  "jiff",
  "proptest",

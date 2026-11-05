@@ -17,12 +17,16 @@ publish = false
 
 [dependencies]
 calendar-sync-model.workspace = true
+calendar-sync-recurrence.workspace = true
 jiff = { workspace = true, features = ["serde"] }
 serde.workspace = true
 
 [dev-dependencies]
 # The testkit depends on this crate for its seams. Integration tests link one copy of each.
 calendar-sync-testkit.workspace = true
+# The split tests place zoned times. A library build reads zones only through the caller's
+# `ZoneSource`.
+jiff = { workspace = true, features = ["serde", "tzdb-bundle-always"] }
 proptest.workspace = true
 serde_json.workspace = true
 
