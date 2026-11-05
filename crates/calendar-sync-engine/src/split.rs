@@ -37,9 +37,9 @@
 //! override's own time where it had not been moved from its instance: civil time where the key is
 //! in the split instance's frame, elapsed time otherwise. Extra dates, excluded dates and cancelled
 //! instances at or after the split move the same way into the new series' recurrence, where it
-//! has one. An override that
-//! cannot be moved, because an all-day series became a timed one or the reverse, is not carried,
-//! and [`SplitStep::Create`] names it, so the application can report it.
+//! has one. An override, excluded date or extra date that cannot be moved, because an all-day
+//! series became a timed one or the reverse, is not carried, and [`SplitStep::Create`] names its
+//! instance, so the application can report it.
 //!
 //! ```
 //! use calendar_sync_engine::split::Split;
@@ -191,8 +191,11 @@ pub enum SplitStep {
         /// The master. Its fields are the tail's, with the old series' extra and excluded
         /// dates at or after the split carried into its recurrence.
         master: ProviderEvent,
-        /// The overrides at or after the split that cannot be carried, because the series
-        /// changed between all-day and timed. They end with the old series.
+        /// The old series' instances at or after the split whose override, exclusion or extra
+        /// date cannot be carried, because the series changed between all-day and timed: its
+        /// overrides (cancelled ones included), then its excluded dates, then its extra dates.
+        /// Each ends with the old series, so an excluded or cancelled instance can show again
+        /// in the new one, and an extra date is gone from it.
         uncarried: Vec<InstanceKey>,
     },
     /// Add a modified instance to the new series.
@@ -400,18 +403,19 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
             carry(&theirs.excluded_dates, &mut ours.excluded_dates);
             carry(&cancelled, &mut ours.excluded_dates);
         }
-        let uncarried = match &shift {
-            Some(_) => Vec::new(),
-            None => old
-                .overrides
-                .keys()
-                .filter(|key| {
-                    self.instant(key.original_start())
-                        .is_ok_and(|start| start >= at)
-                })
-                .cloned()
-                .collect(),
-        };
+        let mut uncarried = Vec::new();
+        if shift.is_none() {
+            let recurrence = master.fields.recurrence.as_ref();
+            let overrides = old.overrides.keys().map(InstanceKey::original_start);
+            let excluded = recurrence.into_iter().flat_map(|r| &r.excluded_dates);
+            let extra = recurrence.into_iter().flat_map(|r| &r.dates);
+            for value in overrides.chain(excluded).chain(extra) {
+                let key = InstanceKey::new(value.clone());
+                if self.instant(value).is_ok_and(|start| start >= at) && !uncarried.contains(&key) {
+                    uncarried.push(key);
+                }
+            }
+        }
         let master = ProviderEvent {
             ids: ProviderIds {
                 provider: master.ids.provider,

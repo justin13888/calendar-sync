@@ -717,7 +717,7 @@ fn a_split_at_the_start_or_of_a_single_event_is_refused() {
 }
 
 #[test]
-fn overrides_that_cannot_move_to_an_all_day_series_are_named() {
+fn overrides_and_dates_that_cannot_move_to_an_all_day_series_are_named() {
     let zones = zones();
     let splitter = Splitter::new(&zones, floating());
     let mut old = simple(Form::Zoned, RuleEnd::Never);
@@ -729,12 +729,43 @@ fn overrides_that_cannot_move_to_an_all_day_series_are_named() {
             revision: None,
         },
     );
+    let zoned = |civil: &str| Form::Zoned.value(civil.parse().unwrap());
+    // Excluded and extra dates on either side of the split: only the later ones are named.
+    let recurrence = old
+        .master
+        .as_mut()
+        .unwrap()
+        .fields
+        .recurrence
+        .as_mut()
+        .unwrap();
+    recurrence.excluded_dates = vec![
+        zoned("2026-03-02T09:30:00"),
+        zoned("2026-03-08T09:30:00"),
+        // Also cancelled: named once.
+        zoned("2026-03-06T09:30:00"),
+    ];
+    recurrence.dates = vec![zoned("2026-03-03T18:00:00"), zoned("2026-03-09T18:00:00")];
     let mut tail = old.master.as_ref().unwrap().fields.clone();
     tail.times = EventTimes::at(TimeValue::all_day("2026-03-05".parse().unwrap()));
+    tail.recurrence = Some(Recurrence::rule(RecurrenceRule::new(Frequency::Daily)));
     let split = split_at("2026-03-05T09:30:00", Form::Zoned);
     let step = splitter.next(&split, Some(&tail), &old, None).unwrap();
-    let SplitStep::Create { uncarried, .. } = step else {
+    let SplitStep::Create {
+        uncarried, master, ..
+    } = step
+    else {
         panic!("{step:?}");
     };
-    assert_eq!(uncarried, vec![key]);
+    assert_eq!(
+        uncarried,
+        vec![
+            key,
+            InstanceKey::new(zoned("2026-03-08T09:30:00")),
+            InstanceKey::new(zoned("2026-03-09T18:00:00")),
+        ]
+    );
+    // None of them was carried into the new series in its old form.
+    let carried = master.fields.recurrence.unwrap();
+    assert!(carried.excluded_dates.is_empty() && carried.dates.is_empty());
 }
