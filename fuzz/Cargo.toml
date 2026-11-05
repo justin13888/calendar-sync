@@ -16,6 +16,7 @@ members = ["."]
 
 [dependencies]
 arbitrary = { version = "1.5.0", features = ["derive"] }
+calendar-sync-ical = { path = "../crates/calendar-sync-ical" }
 calendar-sync-model = { path = "../crates/calendar-sync-model" }
 calendar-sync-recurrence = { path = "../crates/calendar-sync-recurrence" }
 jiff = { version = "0.2.39", default-features = false, features = ["std", "tzdb-bundle-always"] }
@@ -24,6 +25,13 @@ libfuzzer-sys = "0.4.13"
 [[bin]]
 name = "expand"
 path = "fuzz_targets/expand.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ical_roundtrip"
+path = "fuzz_targets/ical_roundtrip.rs"
 test = false
 doc = false
 bench = false
