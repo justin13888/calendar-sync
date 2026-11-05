@@ -63,7 +63,7 @@ use jiff::civil::{Date, DateTime, Time};
 use jiff::tz::TimeZone;
 use jiff::{SignedDuration, Timestamp};
 
-use crate::ids::{DerivedIds, PREFIX};
+use crate::ids::{DerivedIds, GOOGLE_ID_MAX, PREFIX};
 use crate::seam::ResourceId;
 use crate::sync::EditId;
 
@@ -98,6 +98,10 @@ impl Split {
     /// derived from it ([`Split::ids`]) name it, and two splits never share them. Google accepts
     /// the derived id while this is at most 636 bytes: the series id, the edit id and the
     /// instance together, with about 40 bytes besides.
+    ///
+    /// The series id is kept whole, so a split of a series that was itself made by a split
+    /// derives a key about 1.6 times as long as that series' own. [`Splitter::next`] refuses a
+    /// create whose key would be longer than [`GOOGLE_ID_MAX`] with [`SplitError::TooLong`].
     #[must_use]
     pub fn create_edit(&self) -> EditId {
         let mut text = String::from(TAG);
@@ -223,6 +227,8 @@ pub enum SplitStep {
         value: Override,
     },
     /// Nothing to write: the split is complete, was never started, or its old series is gone.
+    /// Also where the old series has no instance at or after the split and no new series
+    /// exists, even with a tail: the tail is not created.
     Done,
 }
 
@@ -240,6 +246,13 @@ pub enum SplitError {
     /// A counted rule could not be read, or ran past the recurrence crate's budget before the
     /// split.
     Rule(String),
+    /// The new series' derived key would be `length` characters, more than [`GOOGLE_ID_MAX`].
+    /// It names the old series whole, so this happens to a series split again and again; the
+    /// new series is never created.
+    TooLong {
+        /// The length of the key [`Split::ids`] derives.
+        length: usize,
+    },
 }
 
 impl core::fmt::Display for SplitError {
@@ -249,6 +262,10 @@ impl core::fmt::Display for SplitError {
             Self::Unplaceable(value) => write!(f, "{value:?} cannot be placed in time"),
             Self::AtStart => f.write_str("a split at the series' start edits the whole series"),
             Self::Rule(detail) => write!(f, "a counted rule cannot be trimmed: {detail}"),
+            Self::TooLong { length } => write!(
+                f,
+                "the new series' id would be {length} characters, over {GOOGLE_ID_MAX}"
+            ),
         }
     }
 }
@@ -277,7 +294,8 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
     /// # Errors
     ///
     /// [`SplitError`] where the old master does not recur, a time cannot be placed, the split is
-    /// at the series' start, or a counted rule cannot be trimmed.
+    /// at the series' start, a counted rule cannot be trimmed, or the new series' key would be
+    /// too long to create it under.
     pub fn next(
         &self,
         split: &Split,
@@ -293,10 +311,13 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
         let untrimmed = trimmed != master.fields;
         let new = new.and_then(|series| Some((series, series.master.as_ref()?)));
         let Some((new, new_master)) = new else {
-            return Ok(match tail {
+            // A trimmed old series without a new one is a split whose new series was deleted
+            // after the trim, or a series that already ended before the split: either way there
+            // is nothing left to split, and the tail is not created.
+            return match tail {
                 Some(tail) if untrimmed => self.create(split, tail, old, master, at),
-                _ => SplitStep::Done,
-            });
+                _ => Ok(SplitStep::Done),
+            };
         };
         let later = self.later_overrides(old, at)?;
         if untrimmed {
@@ -345,9 +366,13 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
         old: &EventSeries,
         master: &ProviderEvent,
         at: Timestamp,
-    ) -> SplitStep {
+    ) -> Result<SplitStep, SplitError> {
         let edit = split.create_edit();
         let ids = DerivedIds::of(&edit);
+        let length = ids.key().len();
+        if length > GOOGLE_ID_MAX {
+            return Err(SplitError::TooLong { length });
+        }
         let shift = self.shift(&split.at, tail.times.start());
         let mut fields = tail.clone();
         if let (Some(theirs), Some(ours), Some(shift)) = (
@@ -399,12 +424,12 @@ impl<'z, Z: ZoneSource + ?Sized> Splitter<'z, Z> {
             fields,
             passthrough: Passthrough::new(),
         };
-        SplitStep::Create {
+        Ok(SplitStep::Create {
             edit,
             ids,
             master,
             uncarried,
-        }
+        })
     }
 
     /// The old series' overrides at or after `at`, in time order.

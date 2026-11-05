@@ -658,6 +658,45 @@ fn a_rule_already_ending_before_the_split_is_left_alone() {
 }
 
 #[test]
+fn a_series_split_again_and_again_is_refused_once_its_key_is_too_long() {
+    let zones = zones();
+    let splitter = Splitter::new(&zones, floating());
+    let mut old = simple(Form::Zoned, RuleEnd::Never);
+    // A Google-shaped series id and a ULID-shaped edit id.
+    old.master.as_mut().unwrap().ids.id = "4f2kq8v1m0c9r7t3s5n6b2h0d1".to_owned();
+    let mut created = Vec::new();
+    for day in 2..10 {
+        let tail = old.master.as_ref().unwrap().fields.clone();
+        let split = Split::new(
+            EditId::new(format!("01HZY3J5K8QW7E2R4T6Y8U0I{day:02}")),
+            ResourceId::new(old.master.as_ref().unwrap().ids.id.clone()),
+            InstanceKey::new(
+                Form::Zoned.value(format!("2026-03-{day:02}T09:30:00").parse().unwrap()),
+            ),
+        );
+        let length = split.ids().key().len();
+        match splitter.next(&split, Some(&tail), &old, None) {
+            Ok(SplitStep::Create { ids, master, .. }) => {
+                assert!(ids.key().len() <= calendar_sync_engine::ids::GOOGLE_ID_MAX);
+                assert_eq!(Split::from_key(ids.key()), Some(split));
+                created.push(ids.key().len());
+                // The next split is of the series this one made.
+                old = EventSeries::single(master);
+            }
+            Ok(step) => panic!("{step:?}"),
+            Err(error) => {
+                assert_eq!(error, SplitError::TooLong { length });
+                assert!(length > calendar_sync_engine::ids::GOOGLE_ID_MAX);
+                break;
+            }
+        }
+    }
+    // Each key holds the last whole, so it grows until a split is refused.
+    assert_eq!(created.len(), 3, "{created:?}");
+    assert!(created.windows(2).all(|pair| pair[0] < pair[1]));
+}
+
+#[test]
 fn a_split_at_the_start_or_of_a_single_event_is_refused() {
     let zones = zones();
     let splitter = Splitter::new(&zones, floating());
