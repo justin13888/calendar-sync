@@ -22,10 +22,20 @@ name = "calendar-sync-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
+ "calendar-sync-ical",
  "calendar-sync-model",
  "calendar-sync-recurrence",
  "jiff",
  "libfuzzer-sys",
+]
+
+[[package]]
+name = "calendar-sync-ical"
+version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "ical-rs",
+ "jiff",
 ]
 
 [[package]]
@@ -122,6 +132,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ical-rs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dbc009237124ae236eb886a57bda65357729b6b8ff7ad21113de2cea933e02a"
+dependencies = [
+ "jiff",
+ "jiff-tzdb",
+ "memchr",
+]
+
+[[package]]
 name = "jiff"
 version = "0.2.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -196,6 +217,12 @@ name = "log"
 version = "0.4.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
+
+[[package]]
+name = "memchr"
+version = "2.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "portable-atomic"
