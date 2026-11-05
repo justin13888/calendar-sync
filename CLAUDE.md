@@ -24,6 +24,7 @@ mise run ci         # every gate CI runs, in order
 | `crates/calendar-sync-ical` | iCalendar mapping. **Pure** |
 | `crates/calendar-sync-google`, `-graph`, `-caldav` | Provider mapping and thin clients; I/O is injected |
 | `crates/calendar-sync-testkit` | Fake providers and recorded fixtures |
+| `fuzz/` | cargo-fuzz targets, a workspace of its own outside the root one. The weekly `scheduled.yml` workflow smokes them on a pinned nightly |
 | `xtask/` | Repository automation (`cargo xtask toolchain`, `purity`, `fixture purity`, `fixture deny`, `references verify`, `references upstream`). Never published |
 | `tests/fixtures/purity`, `tests/fixtures/deny` | Excluded crates that **must fail** clippy and cargo-deny. Do not fix them |
 | `references/` | Vendored specs, the ground truth. A fixed, pinned list; `references/README.md` documents each file. Do not add, drop or edit a file without an issue |

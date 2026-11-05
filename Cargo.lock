@@ -137,6 +137,13 @@ dependencies = [
 [[package]]
 name = "calendar-sync-recurrence"
 version = "0.1.0"
+dependencies = [
+ "calendar-sync-model",
+ "jiff",
+ "proptest",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "calendar-sync-testkit"

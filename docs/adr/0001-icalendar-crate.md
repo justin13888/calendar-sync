@@ -52,7 +52,7 @@ Each disagreement was read against RFC 5545 (`references/rfc/rfc5545.txt`, with 
 
 | Case | `ical-rs` | `calcard` 0.3.14 | RFC 5545 |
 |---|---|---|---|
-| Daily 02:30 `America/New_York` series over the spring-forward gap | Skips the instance in the gap, and `COUNT` keeps counting | Emits 02:30Z: the gap time is read as UTC | Section 3.3.10 (l. 2382-2386): such instances "MUST be ignored and MUST NOT be counted". **`ical-rs` is right** |
+| Daily 02:30 `America/New_York` series over the spring-forward gap | Skips the instance in the gap, and `COUNT` keeps counting | Emits 02:30Z: the gap time is read as UTC | Section 3.3.10 (l. 2382-2386): such instances "MUST be ignored and MUST NOT be counted". **`ical-rs` is right** under that original text; erratum 4271 replaced it, and both are wrong under it (see the amendment) |
 | Daily 01:30 `America/New_York` series over the fall-back fold | 05:30Z, the first occurrence (EDT) | 01:30Z: the fold time is read as UTC | Section 3.3.5 (l. 1889-1893): the first occurrence. **`ical-rs` is right** |
 | Custom `VTIMEZONE` `TZID:America-SanJose` (libical `2446.ics`) | Resolves through the calendar's own `VTIMEZONE`: 21:00Z in PDT, 22:00Z in PST | Ignores the definition and reads every instance as UTC (14:00Z) | Section 3.6.5: the `VTIMEZONE` defines the zone. **`ical-rs` is right** |
 | `VTIMEZONE` whose first onset is after the event (libical `2445.ics`, `US-Eastern` 1998-03-12 08:30) | -04:00, the `TZOFFSETFROM` of the earliest observance | +00:00 | Undefined. The `ical-rs` reading matches libical's convention |
@@ -67,7 +67,7 @@ Each disagreement was read against RFC 5545 (`references/rfc/rfc5545.txt`, with 
 | libical `2446.ics`, `large.ics` | | | iTIP message streams, with `CANCEL`, `COUNTER` and orphan overrides across separate calendars. A per-file instant set is not a meaningful comparison here. The one semantic difference traced in them is the `America-SanJose` case above |
 | Weekly `America/New_York` series across spring-forward. Moved instance plus `EXDATE` in `Europe/Berlin`. UTC `RECURRENCE-ID`. `RANGE=THISANDFUTURE` | Same instants as `calcard` | Same instants as `ical-rs` | Both right |
 
-`ical-rs` never disagreed with RFC 5545 where the RFC decides the case. Where `calcard` diverges on well-formed input and the RFC decides the case, the RFC rules against `calcard`. That rules `calcard` 0.3.14 out as an oracle for DST: it reads gap and fold times, and every time under a non-IANA `VTIMEZONE`, as UTC.
+`ical-rs` never disagreed with RFC 5545 where the RFC decides the case, save the gap row, where it follows the text erratum 4271 replaced (see the amendment). Where `calcard` diverges on well-formed input and the RFC decides the case, the RFC rules against `calcard`. That rules `calcard` 0.3.14 out as an oracle for DST: it reads gap and fold times, and every time under a non-IANA `VTIMEZONE`, as UTC.
 
 ### RSCALE claims reproduced or recorded as false: reproduced
 
@@ -108,8 +108,17 @@ The churn is real: a single maintainer, and a breaking release every few weeks. 
 ## Consequences
 
 - #18 runs the round trip and edit checks over libical and ical.js out of tree, at the commits above, rather than over vendored files.
-- #4 should not take `calcard` 0.3.14 as ground truth for gaps, folds or custom `VTIMEZONE`s. RFC 5545 section 3.3.10 ignores an `RRULE` instance that falls in a gap, while section 3.3.5 shifts a written `DTSTART` in a gap forward. Using jiff's "compatible" disambiguation alone would give the second reading to both. `ical-rs`'s `IcalRecurTimeline` implements both and can serve as a second oracle.
+- #4 should not take `calcard` 0.3.14 as ground truth for gaps, folds or custom `VTIMEZONE`s.
+- Superseded by the amendment below: ~~RFC 5545 section 3.3.10 ignores an `RRULE` instance that falls in a gap, while section 3.3.5 shifts a written `DTSTART` in a gap forward. Using jiff's "compatible" disambiguation alone would give the second reading to both. `ical-rs`'s `IcalRecurTimeline` implements both and can serve as a second oracle.~~
 - The `ical-rs` README is not evidence. Its changelog and its behaviour are.
+
+## Amendment: instances in a daylight-saving gap (#4)
+
+The gap row of the disagreement table, and the Consequences above, read section 3.3.10's original text. Verified erratum 4271 to section 3.3.10 (`references/rfc/rfc5545-inline-errata.html`) replaced it: an instance with "a nonexistent local time" is "handled as specified in Section 3.3.5", so it is placed with the offset before the gap, and counted. Only an invalid date, such as February 30, is still ignored and not counted.
+
+- A rule instance in a gap moves later by the gap's length and counts toward `COUNT`. That is jiff's "compatible" disambiguation, and it now gives the right reading for both a written `DTSTART` and a rule instance.
+- On that row, `ical-rs`'s `IcalRecurTimeline` follows the superseded text, so it is not an oracle for gap instances. Its fold and override rows stand.
+- The decision above is unchanged: nothing in it rests on the gap row.
 
 ## Reopen when
 
