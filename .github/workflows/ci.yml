@@ -243,6 +243,40 @@ jobs:
       - name: cargo publish --dry-run for every publishable crate
         run: cargo publish --workspace --dry-run --locked
 
+  # The CalDAV crate's live probes against real servers, run in containers out of process: RustiCal
+  # and Stalwart are AGPL-licensed, so no code of theirs is linked or vendored.
+  caldav:
+    name: caldav (${{ matrix.server }})
+    strategy:
+      fail-fast: false
+      matrix:
+        server: [rustical, stalwart]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      - name: Build the live probes
+        run: cargo test -p calendar-sync-caldav --locked --test live --no-run
+      - name: Probe ${{ matrix.server }} in a container
+        env:
+          SERVER: ${{ matrix.server }}
+        run: >-
+          sh tests/fixtures/caldav/serve.sh "$SERVER"
+          cargo test -p calendar-sync-caldav --locked --test live -- --ignored --nocapture
+      - name: Server log
+        if: failure()
+        env:
+          SERVER: ${{ matrix.server }}
+        run: docker logs "calendar-sync-$SERVER"
+
   commits:
     name: commits
     runs-on: ubuntu-latest
@@ -280,7 +314,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [toolchain, lint, clippy, test, doc, wasm, purity, deny, msrv, references, package, commits]
+    needs: [toolchain, lint, clippy, test, doc, wasm, purity, deny, msrv, references, package, caldav, commits]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
