@@ -45,7 +45,7 @@ Every task is defined in `mise.toml` and runs with `mise run <task>`.
 | `purity` | Checks the pure crates' dependency graphs and sources, and that the purity fixture still fails clippy |
 | `deny` | Runs cargo-deny, and checks that the deny fixture's copyleft dependency is still rejected |
 | `msrv` | Checks that the workspace builds on the MSRV |
-| `semver` | Checks published crates for semver violations. CI does not run it; release pull requests run the same check (see [Releasing](#releasing)) |
+| `semver` | Checks published crates for semver violations, skipping any `publish = true` crate with no release on crates.io yet. CI does not run it; release pull requests run the same check (see [Releasing](#releasing)) |
 | `commits:check` | Checks that every commit on the branch follows the commit convention |
 | `ci` | Runs `toolchain`, `lint`, `clippy`, `test`, `doc`, `wasm`, `purity`, `deny`, `msrv`, `semver` and `commits:check`, in that order |
 
@@ -162,7 +162,7 @@ The crates share one version, `[workspace.package] version` in `Cargo.toml`, so 
 
 ### Publishing a crate for the first time
 
-Every crate starts with `publish = false`, and release-plz skips those crates entirely. The `release` job publishes nothing, and does not ask crates.io for a token, until at least one crate is publishable. Trusted publishing can only be configured for a crate that already exists on crates.io, so a crate's first release is manual:
+Every crate starts with `publish = false`, and release-plz skips those crates entirely. The `release` job publishes nothing, and does not ask crates.io for a token, until at least one publishable crate has a release on crates.io. Trusted publishing can only be configured for a crate that already exists on crates.io, so a crate's first release is manual:
 
 1. The crate's release issue removes `publish = false`.
 2. A maintainer runs `cargo publish -p <crate>` locally.

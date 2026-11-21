@@ -47,14 +47,25 @@ jobs:
           install_args: release-plz
           cache: false
       # A crate is publishable unless its Cargo.toml sets `publish = false` (`cargo metadata`
-      # reports that as `[]`). Until one is, there is nothing to publish, and the token exchange
-      # below would fail because no crate has a trusted publisher on crates.io yet.
-      - name: Count the publishable crates
+      # reports that as `[]`). Trusted publishing can only be configured for a crate that already
+      # has a release on crates.io, and a crate's first release is manual (CONTRIBUTING.md), so
+      # until a publishable crate is on crates.io the token exchange below would fail. Count only
+      # publishable crates the crates.io index knows; an index answer other than 200 or 404 fails.
+      - name: Count the publishable crates already on crates.io
         id: publishable
         run: |
-          count="$(cargo metadata --no-deps --format-version 1 --locked \
-            | jq '[.packages[] | select(.publish != [])] | length')"
-          echo "publishable crates: $count"
+          count=0
+          for name in $(cargo metadata --no-deps --format-version 1 --locked \
+            | jq -r '.packages[] | select(.publish != []) | .name'); do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' \
+              "https://index.crates.io/${name:0:2}/${name:2:2}/${name}")"
+            case "$status" in
+              200) count=$((count + 1)) ;;
+              404) echo "$name has no release on crates.io yet; its first publish is manual" ;;
+              *) echo "the crates.io index answered $status for $name" >&2; exit 1 ;;
+            esac
+          done
+          echo "publishable crates on crates.io: $count"
           echo "count=$count" >> "$GITHUB_OUTPUT"
       - name: Get a crates.io token through trusted publishing
         id: crates-io-auth
