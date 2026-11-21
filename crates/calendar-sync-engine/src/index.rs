@@ -447,18 +447,29 @@ impl<'z, Z: ZoneSource + ?Sized> InstanceIndex<'z, Z> {
 
     /// Expands `series`, new or changed, over the horizon, and stores it as `id`.
     ///
+    /// Where the store holds no current index, the entry for `id` is dropped instead, so that
+    /// whichever refresh makes the index current again expands the changed series afresh rather
+    /// than trusting the occurrences it held before the change.
+    ///
     /// # Errors
     ///
     /// [`IndexError::NoHorizon`] or [`IndexError::Stale`] if the store holds no current index,
-    /// and [`IndexError::Store`] if it fails.
+    /// and [`IndexError::Store`] if it fails. After a store error, the entry for `id` may still
+    /// hold the series as it was: call this again, or [`InstanceIndex::rebuild`].
     pub fn upsert<S: IndexStore + ?Sized>(
         &self,
         store: &mut S,
         id: &ResourceId,
         series: &EventSeries,
     ) -> Result<(), IndexError<S::Error>> {
-        let horizon = self.current_horizon(store)?;
-        store.put(id, self.expand(series, &horizon))?;
+        match self.current_horizon(store) {
+            Ok(horizon) => store.put(id, self.expand(series, &horizon))?,
+            Err(error @ (IndexError::NoHorizon | IndexError::Stale)) => {
+                store.remove(id)?;
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        }
         Ok(())
     }
 
