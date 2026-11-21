@@ -544,7 +544,8 @@ impl Exchange {
         };
         match report.parse_response(&response.parts(), &response.body) {
             Ok(parsed) => {
-                let mut changes: Vec<Change> = parsed
+                // Removals first, then the changed objects as the multiget reads them.
+                let changes: Vec<Change> = parsed
                     .deleted
                     .into_iter()
                     .map(|href| Change::Remove {
@@ -563,7 +564,6 @@ impl Exchange {
                 } else {
                     Next::Done(cursor)
                 };
-                changes.shrink_to_fit();
                 self.seam.fetch(Fetch {
                     changes,
                     pending,

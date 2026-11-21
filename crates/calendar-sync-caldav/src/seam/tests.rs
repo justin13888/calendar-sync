@@ -466,3 +466,39 @@ fn only_a_507_response_truncates() {
     ));
     assert!(refuses_report(501) && !refuses_report(500));
 }
+
+#[test]
+fn changed_objects_are_read_in_batches() {
+    let seam = seam().with_batch(1);
+    let exchange = seam.exchange(&Request::List {
+        from: ListFrom::Start,
+    });
+    let listing = format!(
+        "{}{}",
+        member("/cal/a.ics", "\"1\""),
+        member("/cal/b.ics", "\"2\"")
+    );
+    let b = OBJECT.replace("UID:a@example.com", "UID:b@example.com");
+    let outcome = drive(
+        exchange,
+        vec![
+            ("REPORT", multistatus(&listing, "s1")),
+            ("REPORT", multiget("/cal/a.ics", "\"1\"", OBJECT)),
+            ("REPORT", multiget("/cal/b.ics", "\"2\"", &b)),
+        ],
+    );
+    let Outcome::Listed(page) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let uids: Vec<_> = page
+        .changes
+        .iter()
+        .map(|change| match change {
+            Change::Upsert {
+                event: Some(event), ..
+            } => event.ids.ical_uid.clone().unwrap(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(uids, ["a@example.com", "b@example.com"]);
+}
