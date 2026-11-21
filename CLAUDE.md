@@ -17,7 +17,7 @@ mise run ci         # every gate CI runs, in order
 
 | Path | What it is |
 |---|---|
-| `crates/calendar-sync` | Facade. Re-exports model, recurrence and engine; `ical`, `google`, `graph` and `caldav` behind features of those names |
+| `crates/calendar-sync` | Facade. Re-exports model and recurrence; engine, `ical`, `google`, `graph` and `caldav` join as each publishes (`docs/semver.md`) |
 | `crates/calendar-sync-model` | Event model. **Pure** |
 | `crates/calendar-sync-recurrence` | Recurrence expansion. **Pure** |
 | `crates/calendar-sync-engine` | Sync engine. **Pure** |
