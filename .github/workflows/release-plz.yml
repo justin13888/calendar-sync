@@ -51,12 +51,19 @@ jobs:
       # has a release on crates.io, and a crate's first release is manual (CONTRIBUTING.md), so
       # until a publishable crate is on crates.io the token exchange below would fail. Count only
       # publishable crates the crates.io index knows; an index answer other than 200 or 404 fails.
+      #
+      # The names are captured in a variable before the loop: a command substitution in a `for`
+      # word list discards its exit status, so a failing `cargo metadata` would give count=0 and
+      # a green job that publishes nothing. The default `bash -e` shell sets no pipefail, so it is
+      # set here for the `cargo metadata | jq` pipe.
       - name: Count the publishable crates already on crates.io
         id: publishable
         run: |
+          set -o pipefail
+          names="$(cargo metadata --no-deps --format-version 1 --locked \
+            | jq -r '.packages[] | select(.publish != []) | .name')"
           count=0
-          for name in $(cargo metadata --no-deps --format-version 1 --locked \
-            | jq -r '.packages[] | select(.publish != []) | .name'); do
+          for name in $names; do
             status="$(curl -sS -o /dev/null -w '%{http_code}' \
               "https://index.crates.io/${name:0:2}/${name:2:2}/${name}")"
             case "$status" in
