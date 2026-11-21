@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 70d7648266d4f35dc0e2d3a438e3e987696aeb84c313f6aff3a9e1ff147b4ed2 # shrinks to initial = ZoneData { version: 0, floating: 0 }, ops = [Zones(ZoneData { version: 1, floating: 0 }), Upsert(3, SeriesCase { form: Instant, start_day: 0, start_hour: 0, hours: 0, rule: None, excluded: None, cancelled: None, modified: None, status: Confirmed, transparency: Opaque }), Roll(25, 29), Zones(ZoneData { version: 0, floating: 0 }), Upsert(3, SeriesCase { form: Instant, start_day: 42, start_hour: 0, hours: 0, rule: None, excluded: None, cancelled: None, modified: None, status: Confirmed, transparency: Opaque }), Zones(ZoneData { version: 1, floating: 0 })], last = (9, 34)

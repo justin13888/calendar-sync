@@ -18,6 +18,9 @@
 //!   one write each provider takes, with the duplicate-reply risk each leaves.
 //! - [`split`]: "this and following" as a series split: the new series created first, the old
 //!   one trimmed after, every step recoverable from what the provider holds.
+//! - [`index`]: every series' occurrences over a rolling horizon, in a discardable store the
+//!   application supplies, invalidated when a series or the time zone data changes.
+//! - [`freebusy`]: occurrences merged into the disjoint intervals in which time is taken.
 //!
 //! ```
 //! use calendar_sync_engine::{Effect, Input, ListFrom, Request, SyncState, step};
@@ -31,14 +34,21 @@
 //! assert!(state.is_syncing());
 //! ```
 
+pub mod freebusy;
 pub mod ids;
+pub mod index;
 pub mod merge;
 pub mod rsvp;
 pub mod seam;
 pub mod split;
 pub mod sync;
 
+pub use freebusy::{BusyInterval, BusyKind};
 pub use ids::DerivedIds;
+pub use index::{
+    Horizon, IndexError, IndexMeta, IndexStore, IndexedInstance, InstanceIndex, MemoryStore,
+    SeriesEntry, ZoneDataVersion,
+};
 pub use merge::{Conflict, FieldValue, MergeOutcome, Refused, Role};
 pub use rsvp::{DuplicateRisk, Reply, Rsvp, RsvpError, RsvpPlan, RsvpTarget};
 pub use seam::{
