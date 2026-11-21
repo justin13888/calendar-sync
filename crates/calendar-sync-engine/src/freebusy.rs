@@ -1,10 +1,10 @@
 //! Free/busy: occurrences merged into the disjoint intervals in which time is taken.
 //!
-//! Each occurrence blocks time as its record says ([`BusyKind::of`]): a cancelled or
-//! transparent event blocks nothing, a tentative one blocks time tentatively (`FBTYPE`
-//! `BUSY-TENTATIVE`, RFC 5545 section 3.2.9), and any other blocks it outright (`BUSY`). An
-//! occurrence that takes no time blocks nothing, as RFC 4791 section 7.10 has a free/busy query
-//! treat it.
+//! Each occurrence blocks time as its record says ([`BusyKind::of`]), by the `TRANSP` and
+//! `STATUS` table of RFC 4791 section 7.10 (vendored at `references/rfc/rfc4791.txt`): a
+//! cancelled or transparent event blocks nothing, a tentative one blocks time tentatively
+//! (`FBTYPE=BUSY-TENTATIVE`, RFC 5545 section 3.2.9), and any other blocks it outright
+//! (`BUSY`). An occurrence that takes no time blocks nothing.
 //!
 //! [`merge`] turns any number of overlapping [`BusyInterval`]s into the disjoint, ordered list a
 //! free/busy reply carries: where intervals of both kinds overlap, the time is busy, and
