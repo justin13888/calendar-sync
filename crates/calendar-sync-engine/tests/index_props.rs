@@ -4,6 +4,8 @@
 //!   data changes, discards and interrupted refreshes, then refreshed, equals one rebuilt from
 //!   nothing.
 //! - A series that never ends holds only what overlaps the horizon, however often it rolls.
+//! - A series finer than daily whose expansion runs out of the period budget rolls to what a
+//!   rebuild holds, with the one loss of its horizon.
 //! - Merged free/busy is ordered and disjoint, and takes time exactly where its inputs do.
 
 use std::collections::BTreeMap;
@@ -504,6 +506,50 @@ proptest! {
                 .map(|interval| interval.kind);
             prop_assert_eq!(actual, expected, "at minute {}", n);
         }
+    }
+}
+
+proptest! {
+    // Each expansion examines the whole period budget, so few cases and one roll.
+    #![proptest_config(ProptestConfig::with_cases(3))]
+
+    #[test]
+    fn a_series_past_the_period_budget_rolls_as_it_rebuilds(
+        offset in 0..60_i64,
+        days in 24..40_i64,
+        roll in 1..6_i64,
+    ) {
+        // Every second is a period, and only the first of each minute an instance: a horizon
+        // over 23 days runs out of the recurrence crate's period budget part-way through.
+        let mut rule = RecurrenceRule::new(Frequency::Secondly);
+        rule.by_second = vec![0];
+        let start = base().checked_add(SignedDuration::from_mins(offset)).unwrap();
+        let mut master = record(
+            "master",
+            EventTimes::new(
+                TimeValue::instant(start),
+                Some(TimeValue::instant(start.checked_add(SignedDuration::from_secs(30)).unwrap())),
+            )
+            .unwrap(),
+        );
+        master.fields.recurrence = Some(Recurrence::rule(rule));
+        let series = EventSeries::single(master);
+        let id = id(0);
+        let zones = ZoneData { version: 0, floating: 0 };
+        let source = zones.zones();
+        let index = InstanceIndex::new(&source, zones.floating(), zones.version());
+        let length = Horizon::new(SignedDuration::ZERO, DAY * i32::try_from(days).unwrap());
+        let mut store = MemoryStore::new();
+        index.refresh(&mut store, length.window_at(base()).unwrap(), [(&id, &series)]).unwrap();
+        let now = base().checked_add(DAY * i32::try_from(roll).unwrap()).unwrap();
+        let horizon = length.window_at(now).unwrap();
+        index.refresh(&mut store, horizon, [(&id, &series)]).unwrap();
+        let mut rebuilt = MemoryStore::new();
+        index.rebuild(&mut rebuilt, horizon, [(&id, &series)]).unwrap();
+        prop_assert_eq!(&store, &rebuilt);
+        // The loss is the horizon's, not one per roll.
+        let losses = store.entry_ref(&id).map_or(0, |entry| entry.losses.len());
+        prop_assert!(losses == 1, "{losses} losses after a roll");
     }
 }
 

@@ -11,7 +11,10 @@
 //! - **A series changes:** [`InstanceIndex::upsert`] expands it again over the horizon;
 //!   [`InstanceIndex::remove`] drops it.
 //! - **The horizon moves:** [`InstanceIndex::refresh`] drops the occurrences that left it and
-//!   expands each series over only the time that entered it.
+//!   expands each series over only the time that entered it. A series whose expansion reports
+//!   a loss, such as one that ran out of the recurrence crate's period budget, or a horizon that
+//!   grew, is expanded over the whole horizon instead, so its occurrences and losses are those
+//!   a rebuild finds.
 //! - **Time zone data changes** (a new database version, or a new floating zone): every entry
 //!   is stale. Reads and [`InstanceIndex::upsert`] refuse a stale index with
 //!   [`IndexError::Stale`], and [`InstanceIndex::refresh`] expands every series again.
@@ -22,7 +25,8 @@
 //! # Bounds
 //!
 //! An index holds only what overlaps its horizon, so a series that never ends holds at most the
-//! occurrences of one horizon, however often the horizon rolls.
+//! occurrences of one horizon, and its losses of one expansion, however often the horizon
+//! rolls.
 //!
 //! ```
 //! use calendar_sync_engine::ResourceId;
@@ -602,6 +606,13 @@ impl<'z, Z: ZoneSource + ?Sized> InstanceIndex<'z, Z> {
 
     /// `entry`, expanded over `previous`, moved to `horizon`: what left is dropped, and only
     /// what entered is expanded.
+    ///
+    /// Only an entry that expansion honoured in full is extended. A loss may depend on the
+    /// window expanded: an expansion that runs out of the recurrence crate's period budget
+    /// stops part-way through it, and its loss names where. So where the stored entry or any
+    /// slice that entered reports a loss, or the horizon grew, so that expanding it whole may
+    /// run out where its parts did not, the series is expanded over the whole horizon instead,
+    /// and its losses are those of the horizon, never accumulated from earlier ones.
     fn extend(
         &self,
         mut entry: SeriesEntry,
@@ -609,13 +620,20 @@ impl<'z, Z: ZoneSource + ?Sized> InstanceIndex<'z, Z> {
         previous: Window,
         horizon: Window,
     ) -> SeriesEntry {
+        let grew = horizon.end().duration_since(horizon.start())
+            > previous.end().duration_since(previous.start());
+        if grew || !entry.losses.is_empty() {
+            return self.expand(series, &horizon);
+        }
         entry
             .instances
             .retain(|instance| horizon.overlaps(instance.start, instance.end));
         for part in uncovered(previous, horizon) {
             let added = self.expand(series, &part);
+            if !added.losses.is_empty() {
+                return self.expand(series, &horizon);
+            }
             entry.instances.extend(added.instances);
-            add_losses(&mut entry.losses, added.losses);
         }
         entry.instances.sort();
         entry.instances.dedup();
