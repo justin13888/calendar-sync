@@ -235,16 +235,10 @@ impl Scrubber {
         let Some(first) = physical.first() else {
             return;
         };
-        let ending = if first.ends_with("\r\n") {
-            "\r\n"
-        } else if first.ends_with('\n') {
-            "\n"
-        } else {
-            ""
-        };
+        let ending = &first[line_content(first).len()..];
         let mut unfolded = String::new();
         for (index, line) in physical.iter().enumerate() {
-            let line = line.trim_end_matches(['\r', '\n']);
+            let line = line_content(line);
             unfolded.push_str(if index == 0 { line } else { &line[1..] });
         }
         let leading = unfolded.len() - unfolded.trim_start().len();
@@ -298,6 +292,25 @@ impl Scrubber {
         }
         out
     }
+}
+
+/// A physical line without its line ending. The ending is a literal `\r\n` or `\n`, or, where a
+/// server escapes the carriage return inside XML such as a `CalDAV` multistatus, `&#13;` or
+/// `&#xD;` (in any case) before the `\n`.
+fn line_content(line: &str) -> &str {
+    let line = line.trim_end_matches(['\r', '\n']);
+    for escaped in ["&#13;", "&#xd;"] {
+        let Some(start) = line.len().checked_sub(escaped.len()) else {
+            continue;
+        };
+        if line
+            .get(start..)
+            .is_some_and(|tail| tail.eq_ignore_ascii_case(escaped))
+        {
+            return &line[..start];
+        }
+    }
+    line
 }
 
 /// The index of the `:` that ends a content line's parameters, outside any quoted value.
@@ -447,5 +460,36 @@ mod tests {
             "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:u1\r\nSUMMARY:Synthetic text 1\r\nATTENDEE;CN=\"Synthetic text 2\";ROLE=REQ-PARTICIPANT:mailto:person1@example.com\r\nDTSTART:20261105T100000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
         );
         assert_eq!(fixture.exchanges[0].response.headers["etag"], "\"7\"");
+    }
+
+    #[test]
+    fn escaped_carriage_returns_in_a_multistatus_scrub_like_a_plain_body() {
+        let plain = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:u1\r\nSUMMARY:Dinner with\r\n  Alex\r\nLOCATION:12 Main Street\r\nDTSTART:20261105T100000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let multistatus = "<?xml version=\"1.0\"?>\n<D:multistatus xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/cal/u1.ics</D:href><D:propstat><D:prop><C:calendar-data>BEGIN:VCALENDAR&#13;\nBEGIN:VEVENT&#13;\nUID:u1&#13;\nSUMMARY:Dinner with&#13;\n  Alex&#13;\nLOCATION:12 Main Street&#Xd;\nDTSTART:20261105T100000Z&#13;\nEND:VEVENT&#13;\nEND:VCALENDAR&#13;\n</C:calendar-data></D:prop></D:propstat></D:response></D:multistatus>\n";
+        let mut recorder = Recorder::new(Provider::CalDav, "one object, two ways");
+        let text = |body: &str| Response {
+            status: 207,
+            headers: [].into(),
+            body: Body::Text(body.to_owned()),
+        };
+        recorder.record(get("/cal/u1.ics"), text(plain));
+        let mut report = get("/cal/");
+        "REPORT".clone_into(&mut report.method);
+        recorder.record(report, text(multistatus));
+        let fixture = recorder.finish().expect("clean");
+        let Body::Text(plain) = &fixture.exchanges[0].response.body else {
+            panic!()
+        };
+        let Body::Text(multistatus) = &fixture.exchanges[1].response.body else {
+            panic!()
+        };
+        assert_eq!(
+            plain,
+            "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:u1\r\nSUMMARY:Synthetic text 1\r\nLOCATION:Synthetic text 2\r\nDTSTART:20261105T100000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        );
+        assert_eq!(
+            multistatus,
+            "<?xml version=\"1.0\"?>\n<D:multistatus xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/cal/u1.ics</D:href><D:propstat><D:prop><C:calendar-data>BEGIN:VCALENDAR&#13;\nBEGIN:VEVENT&#13;\nUID:u1&#13;\nSUMMARY:Synthetic text 1&#13;\nLOCATION:Synthetic text 2&#Xd;\nDTSTART:20261105T100000Z&#13;\nEND:VEVENT&#13;\nEND:VCALENDAR&#13;\n</C:calendar-data></D:prop></D:propstat></D:response></D:multistatus>\n"
+        );
     }
 }
