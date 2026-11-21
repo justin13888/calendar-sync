@@ -8,12 +8,13 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-keywords.workspace = true
-categories.workspace = true
+documentation = "https://docs.rs/calendar-sync-model"
+keywords = ["calendar", "event", "icalendar", "jscalendar", "sync"]
+categories = ["date-and-time", "data-structures"]
 readme = "README.md"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
-# Unpublished until this crate's release issue.
-publish = false
+# docs/semver.md: the 0.x and MSRV policy this crate is released under.
+publish = true
 
 [dependencies]
 jiff = { workspace = true, features = ["serde"] }

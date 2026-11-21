@@ -87,7 +87,28 @@ run = [
 
 [tasks.semver]
 description = "Check published crates for semver violations"
-run = "cargo semver-checks --workspace --all-features"
+# cargo-semver-checks compares each crate with its last release on crates.io, so a crate that is
+# `publish = true` but has no release there yet (before #20) has no baseline and is skipped. A
+# crates.io index answer other than 200 or 404 fails the task rather than skipping silently.
+run = '''
+packages=""
+for manifest in crates/*/Cargo.toml; do
+  grep -qx 'publish = true' "$manifest" || continue
+  name="$(basename "$(dirname "$manifest")")"
+  prefix="$(printf '%s' "$name" | cut -c1-2)/$(printf '%s' "$name" | cut -c3-4)"
+  status="$(curl -sS -o /dev/null -w '%{http_code}' "https://index.crates.io/$prefix/$name")"
+  case "$status" in
+    200) packages="$packages --package $name" ;;
+    404) echo "semver: skipping $name, which has no release on crates.io yet" ;;
+    *) echo "semver: the crates.io index answered $status for $name" >&2; exit 1 ;;
+  esac
+done
+if [ -z "$packages" ]; then
+  echo "semver: no crate has a release on crates.io yet; nothing to check"
+  exit 0
+fi
+cargo semver-checks $packages --all-features
+'''
 
 [tasks."references:verify"]
 description = "Check references/ offline: checksums match, every file is listed, README and SHA256SUMS agree"

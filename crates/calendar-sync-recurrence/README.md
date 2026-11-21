@@ -8,6 +8,18 @@ Expands a series over a window: `RRULE`, `RDATE`, `EXDATE`, `EXRULE`, and overri
 
 Checked against python-dateutil's rrule cases and a recorded calcard 0.3.14 expansion (`tests/data/recurrence/`), and fuzzed (`fuzz/`).
 
-**Status: unreleased.** Part of [calendar-sync](https://github.com/justin13888/calendar-sync).
+The crate reads no time zone database itself: the caller supplies zones through a `ZoneSource`.
+
+```toml
+[dependencies]
+calendar-sync-model = "0.1"
+calendar-sync-recurrence = "0.1"
+```
+
+Part of [calendar-sync](https://github.com/justin13888/calendar-sync). API docs are on [docs.rs](https://docs.rs/calendar-sync-recurrence).
+
+## Versioning
+
+0.x: a minor release (0.1 to 0.2) may break the API, and a patch release never does. The minimum supported Rust version is 1.91, raised only in a minor release. The full policy is in [docs/semver.md](https://github.com/justin13888/calendar-sync/blob/master/docs/semver.md).
 
 Licensed under MIT or Apache-2.0, at your option.

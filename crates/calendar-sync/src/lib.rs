@@ -1,35 +1,16 @@
 //! Two-way calendar sync for Rust.
 //!
-//! This facade re-exports the provider-neutral event model, recurrence expansion and the
-//! deterministic sync engine. Provider integrations are re-exported behind features:
+//! This facade re-exports the published calendar-sync crates:
 //!
-//! | Feature | Module |
+//! | Module | Crate |
 //! |---|---|
-//! | (always) | [`model`], [`recurrence`], [`engine`] |
-//! | `ical` | `ical` |
-//! | `google` | `google` |
-//! | `graph` | `graph` |
-//! | `caldav` | `caldav` (native only) |
+//! | [`model`] | `calendar-sync-model`: the provider-neutral event model |
+//! | [`recurrence`] | `calendar-sync-recurrence`: recurrence window expansion |
+//!
+//! The sync engine, and the iCalendar, Google, Microsoft Graph and CalDAV integrations behind
+//! features of those names, join it as their crates publish.
 
-#[doc(inline)]
-pub use calendar_sync_engine as engine;
 #[doc(inline)]
 pub use calendar_sync_model as model;
 #[doc(inline)]
 pub use calendar_sync_recurrence as recurrence;
-
-#[cfg(feature = "ical")]
-#[doc(inline)]
-pub use calendar_sync_ical as ical;
-
-#[cfg(feature = "google")]
-#[doc(inline)]
-pub use calendar_sync_google as google;
-
-#[cfg(feature = "graph")]
-#[doc(inline)]
-pub use calendar_sync_graph as graph;
-
-#[cfg(feature = "caldav")]
-#[doc(inline)]
-pub use calendar_sync_caldav as caldav;

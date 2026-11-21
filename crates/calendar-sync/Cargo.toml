@@ -8,32 +8,20 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
+documentation = "https://docs.rs/calendar-sync"
 keywords.workspace = true
-categories.workspace = true
+categories = ["date-and-time"]
 readme = "README.md"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE-*"]
-# Unpublished until this crate's release issue.
-publish = false
+# docs/semver.md: the 0.x and MSRV policy this crate is released under.
+publish = true
 
-[features]
-default = []
-## iCalendar mapping (`calendar-sync-ical`).
-ical = ["dep:calendar-sync-ical"]
-## Google Calendar provider (`calendar-sync-google`).
-google = ["dep:calendar-sync-google"]
-## Microsoft Graph provider (`calendar-sync-graph`).
-graph = ["dep:calendar-sync-graph"]
-## CalDAV provider (`calendar-sync-caldav`). Native only.
-caldav = ["dep:calendar-sync-caldav"]
-
+# Only published crates may appear here, optional ones included: crates.io must resolve every
+# dependency of a package it accepts. The engine and the `ical`, `google`, `graph` and `caldav`
+# features come back as their crates publish (docs/semver.md, "Facade").
 [dependencies]
 calendar-sync-model.workspace = true
 calendar-sync-recurrence.workspace = true
-calendar-sync-engine.workspace = true
-calendar-sync-ical = { workspace = true, optional = true }
-calendar-sync-google = { workspace = true, optional = true }
-calendar-sync-graph = { workspace = true, optional = true }
-calendar-sync-caldav = { workspace = true, optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
