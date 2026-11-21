@@ -138,6 +138,12 @@ impl CalDavSeam {
         self
     }
 
+    /// Sets how a later full listing starts, as [`Capabilities::listing`] chose it. A cursor
+    /// already issued keeps the listing that issued it.
+    pub fn set_listing(&mut self, listing: Listing) {
+        self.listing = listing;
+    }
+
     /// Sets the `DTSTAMP` of every `VEVENT` a later write adds.
     pub fn set_stamp(&mut self, stamp: Timestamp) {
         self.stamp = stamp;

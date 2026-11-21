@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "provider": "caldav",
+  "description": "Live probe: discover",
+  "exchanges": [
+    {
+      "request": {
+        "method": "OPTIONS",
+        "url": "/caldav/principal/ci/ci-test/"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "dav": "1, 3, access-control, calendar-access, webdav-push"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PROPFIND",
+        "url": "/caldav/principal/ci/ci-test/",
+        "headers": {
+          "content-type": "application/xml; charset=utf-8",
+          "depth": "0"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<D:propfind xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\"><D:prop><D:supported-report-set/><C:supported-calendar-component-set/><D:sync-token/></D:prop></D:propfind>"
+        }
+      },
+      "response": {
+        "status": 207,
+        "headers": {
+          "content-type": "text/xml"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<multistatus xmlns=\"DAV:\" xmlns:CAL=\"urn:ietf:params:xml:ns:caldav\" xmlns:CARD=\"urn:ietf:params:xml:ns:carddav\" xmlns:CS=\"http://calendarserver.org/ns/\" xmlns:PUSH=\"https://bitfire.at/webdav-push\">\n    <response>\n        <href>/caldav/principal/ci/ci-test/</href>\n        <propstat>\n            <prop>\n                <supported-report-set>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-query/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-multiget/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <sync-collection/>\n                        </report>\n                    </supported-report>\n                </supported-report-set>\n                <CAL:supported-calendar-component-set>\n                    <CAL:comp name=\"VEVENT\"/>\n                    <CAL:comp name=\"VTODO\"/>\n                    <CAL:comp name=\"VJOURNAL\"/>\n                </CAL:supported-calendar-component-set>\n                <sync-token>github.com/lennart-k/rustical/ns/29</sync-token>\n            </prop>\n            <status>HTTP/1.1 200 OK</status>\n        </propstat>\n    </response>\n</multistatus>"
+        }
+      }
+    }
+  ]
+}
+
