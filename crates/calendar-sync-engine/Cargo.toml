@@ -22,6 +22,9 @@ jiff = { workspace = true, features = ["serde"] }
 serde.workspace = true
 
 [dev-dependencies]
+# The RSVP tests write a `CalDAV` reply's body with it. The library does not depend on it: the
+# seam holding an object's bytes applies the reply.
+calendar-sync-ical.workspace = true
 # The testkit depends on this crate for its seams. Integration tests link one copy of each.
 calendar-sync-testkit.workspace = true
 # The split tests place zoned times. A library build reads zones only through the caller's

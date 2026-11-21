@@ -14,6 +14,8 @@
 //!   device names the same resource.
 //! - [`merge`]: the three-way merge of one event at push time, field by field, with
 //!   organizer and attendee ownership.
+//! - [`rsvp`]: an attendee's reply, checked against what the attendee owns, then planned as the
+//!   one write each provider takes, with the duplicate-reply risk each leaves.
 //! - [`split`]: "this and following" as a series split: the new series created first, the old
 //!   one trimmed after, every step recoverable from what the provider holds.
 //!
@@ -31,12 +33,14 @@
 
 pub mod ids;
 pub mod merge;
+pub mod rsvp;
 pub mod seam;
 pub mod split;
 pub mod sync;
 
 pub use ids::DerivedIds;
 pub use merge::{Conflict, FieldValue, MergeOutcome, Refused, Role};
+pub use rsvp::{DuplicateRisk, Reply, Rsvp, RsvpError, RsvpPlan, RsvpTarget};
 pub use seam::{
     Change, Cursor, Failure, ListFrom, Next, Outcome, Page, ProviderSeam, Request, RequestId,
     ResourceId,

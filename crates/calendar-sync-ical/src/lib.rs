@@ -13,6 +13,9 @@
 //!   whose fields changed; [`IcalDocument::to_bytes`] returns the bytes.
 //! - [`read_feed`] reads a subscription in one call.
 //! - Every read and write returns the [`Loss`](calendar_sync_model::Loss)es it could not carry.
+//! - [`IcalDocument::reply`] writes an attendee's reply, minimal iTIP (RFC 5546) for a `CalDAV`
+//!   server that schedules (RFC 6638): only the `PARTSTAT` of the attendee's own `ATTENDEE` line
+//!   changes, and what an attendee may not change is refused. See [`ItipError`].
 //!
 //! # Mapping
 //!
@@ -48,6 +51,7 @@
 //! (`docs/adr/0001-icalendar-crate.md`); none of its types appear in this crate's API.
 
 mod document;
+mod itip;
 mod line;
 mod read;
 mod value;
@@ -55,6 +59,7 @@ mod write;
 mod zone;
 
 pub use document::{IcalDocument, MAPPER_VERSION, Read, ReadSeries, Source, WriteError};
+pub use itip::ItipError;
 
 /// Reads a subscription feed: every `VEVENT` of every `VCALENDAR` in `bytes`, identified by its
 /// `UID`.

@@ -125,7 +125,8 @@ impl core::error::Error for WriteError {}
 /// fields changed.
 #[derive(Clone, Debug)]
 pub struct IcalDocument {
-    calendars: Vec<IcalCst<'static>>,
+    /// The `VCALENDAR`s, as parsed. `itip` edits them in place.
+    pub(crate) calendars: Vec<IcalCst<'static>>,
     problems: Vec<String>,
 }
 
