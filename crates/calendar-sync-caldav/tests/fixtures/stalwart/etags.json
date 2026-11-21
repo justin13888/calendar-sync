@@ -35,7 +35,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:supported-report-set><D:supported-report><D:report><D:sync-collection/></D:report></D:supported-report><D:supported-report><D:report><D:acl-principal-prop-set/></D:report></D:supported-report><D:supported-report><D:report><D:principal-match/></D:report></D:supported-report><D:supported-report><D:report><D:expand-property/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-query/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-multiget/></D:report></D:supported-report><D:supported-report><D:report><A:free-busy-query/></D:report></D:supported-report></D:supported-report-set><A:supported-calendar-component-set><A:comp name=\"VEVENT\"/><A:comp name=\"VTODO\"/><A:comp name=\"VJOURNAL\"/><A:comp name=\"VFREEBUSY\"/><A:comp name=\"VTIMEZONE\"/><A:comp name=\"VALARM\"/><A:comp name=\"STANDARD\"/><A:comp name=\"DAYLIGHT\"/><A:comp name=\"VAVAILABILITY\"/><A:comp name=\"AVAILABLE\"/><A:comp name=\"PARTICIPANT\"/><A:comp name=\"VLOCATION\"/><A:comp name=\"VRESOURCE\"/></A:supported-calendar-component-set><D:sync-token>urn:stalwart:davsync:c</D:sync-token></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:supported-report-set><D:supported-report><D:report><D:sync-collection/></D:report></D:supported-report><D:supported-report><D:report><D:acl-principal-prop-set/></D:report></D:supported-report><D:supported-report><D:report><D:principal-match/></D:report></D:supported-report><D:supported-report><D:report><D:expand-property/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-query/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-multiget/></D:report></D:supported-report><D:supported-report><D:report><A:free-busy-query/></D:report></D:supported-report></D:supported-report-set><A:supported-calendar-component-set><A:comp name=\"VEVENT\"/><A:comp name=\"VTODO\"/><A:comp name=\"VJOURNAL\"/><A:comp name=\"VFREEBUSY\"/><A:comp name=\"VTIMEZONE\"/><A:comp name=\"VALARM\"/><A:comp name=\"STANDARD\"/><A:comp name=\"DAYLIGHT\"/><A:comp name=\"VAVAILABILITY\"/><A:comp name=\"AVAILABLE\"/><A:comp name=\"PARTICIPANT\"/><A:comp name=\"VLOCATION\"/><A:comp name=\"VRESOURCE\"/></A:supported-calendar-component-set><D:sync-token>urn:stalwart:davsync:4</D:sync-token></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     },
@@ -68,7 +68,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;2932973689&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;3904652578&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     },
@@ -88,7 +88,7 @@
       "response": {
         "status": 201,
         "headers": {
-          "etag": "\"773120105\""
+          "etag": "\"2394089092\""
         }
       }
     },
@@ -112,7 +112,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;2932973689&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:resourcetype/><D:getcontenttype>text/calendar</D:getcontenttype><D:getetag>&quot;773120105&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;3904652578&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:resourcetype/><D:getcontenttype>text/calendar</D:getcontenttype><D:getetag>&quot;2394089092&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     },
@@ -136,7 +136,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:getetag>&quot;773120105&quot;</D:getetag><A:calendar-data><![CDATA[BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//calendar-sync-caldav//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lin8ob7ec@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nSUMMARY:Synthetic text 1\r\nDESCRIPTION:Synthetic text 2\r\nDTEND:20300107T160000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n]]></A:calendar-data></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:getetag>&quot;2394089092&quot;</D:getetag><A:calendar-data><![CDATA[BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//calendar-sync-caldav//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lin8ob7ec@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nSUMMARY:Synthetic text 1\r\nDESCRIPTION:Synthetic text 2\r\nDTEND:20300107T160000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n]]></A:calendar-data></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     },
@@ -160,7 +160,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;2932973689&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:resourcetype/><D:getcontenttype>text/calendar</D:getcontenttype><D:getetag>&quot;773120105&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;3904652578&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/dav/cal/admin%40example.com/default/csedite1p6uoj55lin8ob7ec.ics</D:href><D:propstat><D:prop><D:resourcetype/><D:getcontenttype>text/calendar</D:getcontenttype><D:getetag>&quot;2394089092&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     },
@@ -169,7 +169,7 @@
         "method": "DELETE",
         "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lin8ob7ec.ics",
         "headers": {
-          "if-match": "\"773120105\""
+          "if-match": "\"2394089092\""
         }
       },
       "response": {
@@ -196,7 +196,7 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;2932973689&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/><A:calendar/></D:resourcetype><D:getetag>&quot;3904652578&quot;</D:getetag></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontenttype/></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>"
         }
       }
     }

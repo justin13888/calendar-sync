@@ -6,7 +6,7 @@
     {
       "request": {
         "method": "OPTIONS",
-        "url": "/caldav/principal/ci/ci-test/"
+        "url": "/caldav/principal/ci/calendar-sync/"
       },
       "response": {
         "status": 200,
@@ -18,7 +18,7 @@
     {
       "request": {
         "method": "PROPFIND",
-        "url": "/caldav/principal/ci/ci-test/",
+        "url": "/caldav/principal/ci/calendar-sync/",
         "headers": {
           "content-type": "application/xml; charset=utf-8",
           "depth": "0"
@@ -35,23 +35,30 @@
         },
         "body": {
           "kind": "text",
-          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<multistatus xmlns=\"DAV:\" xmlns:CAL=\"urn:ietf:params:xml:ns:caldav\" xmlns:CARD=\"urn:ietf:params:xml:ns:carddav\" xmlns:CS=\"http://calendarserver.org/ns/\" xmlns:PUSH=\"https://bitfire.at/webdav-push\">\n    <response>\n        <href>/caldav/principal/ci/ci-test/</href>\n        <propstat>\n            <prop>\n                <supported-report-set>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-query/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-multiget/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <sync-collection/>\n                        </report>\n                    </supported-report>\n                </supported-report-set>\n                <CAL:supported-calendar-component-set>\n                    <CAL:comp name=\"VEVENT\"/>\n                    <CAL:comp name=\"VTODO\"/>\n                    <CAL:comp name=\"VJOURNAL\"/>\n                </CAL:supported-calendar-component-set>\n                <sync-token>github.com/lennart-k/rustical/ns/36</sync-token>\n            </prop>\n            <status>HTTP/1.1 200 OK</status>\n        </propstat>\n    </response>\n</multistatus>"
+          "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<multistatus xmlns=\"DAV:\" xmlns:CAL=\"urn:ietf:params:xml:ns:caldav\" xmlns:CARD=\"urn:ietf:params:xml:ns:carddav\" xmlns:CS=\"http://calendarserver.org/ns/\" xmlns:PUSH=\"https://bitfire.at/webdav-push\">\n    <response>\n        <href>/caldav/principal/ci/calendar-sync/</href>\n        <propstat>\n            <prop>\n                <supported-report-set>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-query/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <CAL:calendar-multiget/>\n                        </report>\n                    </supported-report>\n                    <supported-report>\n                        <report>\n                            <sync-collection/>\n                        </report>\n                    </supported-report>\n                </supported-report-set>\n                <CAL:supported-calendar-component-set>\n                    <CAL:comp name=\"VEVENT\"/>\n                    <CAL:comp name=\"VTODO\"/>\n                    <CAL:comp name=\"VJOURNAL\"/>\n                </CAL:supported-calendar-component-set>\n                <sync-token>github.com/lennart-k/rustical/ns/5</sync-token>\n            </prop>\n            <status>HTTP/1.1 200 OK</status>\n        </propstat>\n    </response>\n</multistatus>"
         }
       }
     },
     {
       "request": {
         "method": "DELETE",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics"
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics"
       },
       "response": {
-        "status": 200
+        "status": 404,
+        "headers": {
+          "content-type": "text/plain; charset=utf-8"
+        },
+        "body": {
+          "kind": "text",
+          "content": "Not found"
+        }
       }
     },
     {
       "request": {
         "method": "PUT",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics",
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics",
         "headers": {
           "content-type": "text/calendar; charset=utf-8",
           "if-none-match": "*"
@@ -71,7 +78,7 @@
     {
       "request": {
         "method": "GET",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics"
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics"
       },
       "response": {
         "status": 200,
@@ -88,7 +95,7 @@
     {
       "request": {
         "method": "PUT",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics",
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics",
         "headers": {
           "content-type": "text/calendar; charset=utf-8",
           "if-match": "\"df35414d425df72217502be6d309610c460c9dbaaf048f9632df8954b35e42e5\""
@@ -108,7 +115,7 @@
     {
       "request": {
         "method": "GET",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics"
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics"
       },
       "response": {
         "status": 200,
@@ -125,7 +132,7 @@
     {
       "request": {
         "method": "DELETE",
-        "url": "/caldav/principal/ci/ci-test/csedite1p6uoj55lpmasj9clpg.ics",
+        "url": "/caldav/principal/ci/calendar-sync/csedite1p6uoj55lpmasj9clpg.ics",
         "headers": {
           "if-match": "\"1cc33979fa1bbd93c4c64e52ed98cd4fe2d848f779236f603deef4e12806e192\""
         }
