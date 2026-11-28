@@ -7,9 +7,6 @@ on:
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [master]
-  # release-plz dispatches this workflow on its release branches, because a pull request opened
-  # with GITHUB_TOKEN does not trigger `pull_request` workflows.
-  workflow_dispatch:
 
 permissions: {}
 

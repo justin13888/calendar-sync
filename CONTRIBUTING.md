@@ -134,11 +134,11 @@ Do not silence the purity lints in library code. A test that reads fixture files
 
 ## Releasing
 
-Releases are automated by [release-plz](https://release-plz.dev/), configured in `release-plz.toml` and run by `.github/workflows/release-plz.yml` on every push to `master`. No repository secret is involved.
+Releases are automated by [release-plz](https://release-plz.dev/), configured in `release-plz.toml` and run by `.github/workflows/release-plz.yml` on every push to `master`. The release pull request is opened with a maintainer's personal access token, and crates publish through crates.io trusted publishing with no stored registry token (see [Maintainer setup](#maintainer-setup)).
 
 1. **A change merges.** Pull requests are squash-merged, so each Conventional Commit title on `master` is one changelog entry.
 2. **The release pull request opens or updates.** The `release-pr` job bumps the versions the commits call for, writes each crate's `CHANGELOG.md` with the rules in `cliff.toml`, and opens or updates one pull request titled `chore(release): release`, labelled `release`. It also runs cargo-semver-checks against each crate's last published version: an incompatible API change it finds forces a breaking version bump, and the pull request body reports it.
-3. **CI runs on it through a dispatch.** The pull request is opened with the default `GITHUB_TOKEN`, and GitHub starts no `pull_request` workflow for it. The job therefore runs `gh workflow run ci.yml --ref <release branch>`, and the dispatched run reports `ci-success` on the release branch's head commit. To re-run CI there by hand, run the same command.
+3. **CI runs on it.** The `release-pr` job opens the pull request with the `RELEASE_PLZ_TOKEN` secret rather than the default `GITHUB_TOKEN`, because GitHub starts no `pull_request` workflow for a pull request the default token opens. CI therefore runs on the release pull request like on any other.
 4. **A maintainer reviews and merges it.**
 5. **The crates publish.** On the merge commit, the `release` job gets a short-lived crates.io token through [trusted publishing](https://crates.io/docs/trusted-publishing), publishes every crate whose new version is not on crates.io yet, then creates a `<crate>-v<version>` tag and a GitHub release for each. On any other push it publishes nothing (`release_always = false`).
 
@@ -155,6 +155,12 @@ Releases are automated by [release-plz](https://release-plz.dev/), configured in
 | `chore(deps)` | Dependencies |
 
 `build`, `ci`, `test`, `style`, other `chore` commits and the release commits are left out. A breaking change (`!` or a `BREAKING CHANGE:` footer) is always listed, marked **breaking**.
+
+### Maintainer setup
+
+The release workflow needs one repository secret:
+
+- **`RELEASE_PLZ_TOKEN`**: a fine-grained personal access token of a maintainer, for this repository only, with **Contents** and **Pull requests** read and write. The `release-pr` job pushes the release branch and opens the pull request with it, and fails at its first step while the secret is unset. The release pull request is authored by the token's owner, so that maintainer cannot approve it as a review; the ruleset requires no approving review.
 
 ### Versions
 
