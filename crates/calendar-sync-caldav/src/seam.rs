@@ -730,9 +730,14 @@ fn refuses_report(status: u16) -> bool {
     matches!(status, 400 | 403 | 405 | 415 | 501)
 }
 
-/// Whether `status` says nothing about the request, which may be tried again.
+/// Whether `status` says nothing about the request, which may be tried again: a timeout or rate
+/// limit (`408`, `425`, `429`), any server error but `501 Not Implemented`, which a retry does not
+/// change, and `401`. The transport adds and refreshes the credentials (see [`Transport`]), so an
+/// expired one is retried, as the Google and Graph seams do.
+///
+/// [`Transport`]: crate::http::Transport
 fn transient(status: u16) -> bool {
-    matches!(status, 408 | 425 | 429 | 500 | 502 | 503 | 504)
+    matches!(status, 401 | 408 | 425 | 429 | 500 | 502..=599)
 }
 
 /// The failure an unexpected status stands for.

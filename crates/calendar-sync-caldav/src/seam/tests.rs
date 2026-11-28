@@ -3,7 +3,7 @@ use calendar_sync_engine::{
 };
 use calendar_sync_model::ProviderRevision;
 
-use super::{CalDavSeam, Exchange, Listing, precondition, refuses_report, truncated};
+use super::{CalDavSeam, Exchange, Listing, precondition, refuses_report, transient, truncated};
 use crate::http::{HttpResponse, TransportError};
 use crate::object;
 
@@ -465,6 +465,16 @@ fn only_a_507_response_truncates() {
             .as_slice()
     ));
     assert!(refuses_report(501) && !refuses_report(500));
+}
+
+#[test]
+fn retryable_statuses_are_transient() {
+    for status in [401, 408, 425, 429, 500, 502, 503, 504, 505, 507, 511, 599] {
+        assert!(transient(status), "{status}");
+    }
+    for status in [400, 403, 409, 415, 422, 501] {
+        assert!(!transient(status), "{status}");
+    }
 }
 
 #[test]
