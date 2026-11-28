@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install the pinned Rust toolchain
+      - name: Install the Rust toolchain
         run: rustup toolchain install
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
@@ -43,15 +43,15 @@ jobs:
     permissions:
       contents: read
     env:
-      # cargo-fuzz needs nightly for its sanitizer flags. Only this job uses it, pinned by date;
+      # cargo-fuzz needs nightly for its sanitizer flags. Only this job uses it, the latest one;
       # every other build stays on rust-toolchain.toml's stable.
-      FUZZ_TOOLCHAIN: nightly-2026-09-25
+      FUZZ_TOOLCHAIN: nightly
       CARGO_FUZZ_VERSION: 0.13.2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install the pinned nightly toolchain
+      - name: Install the nightly toolchain
         run: rustup toolchain install "$FUZZ_TOOLCHAIN" --profile minimal
       - name: Install cargo-fuzz
         run: cargo +"$FUZZ_TOOLCHAIN" install --locked cargo-fuzz --version "$CARGO_FUZZ_VERSION"
@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install the pinned Rust toolchain
+      - name: Install the Rust toolchain
         run: rustup toolchain install
       # Probes a dedicated test calendar through the Google seam (crates/calendar-sync-google,
       # tests/live.rs). Until the probe account's secrets exist, the gate stays unset and the
@@ -106,7 +106,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install the pinned Rust toolchain
+      - name: Install the Rust toolchain
         run: rustup toolchain install
       # Probes a dedicated test mailbox through the Graph seam (crates/calendar-sync-graph,
       # tests/live.rs), and reports what Graph does with a stale If-Match and a repeated

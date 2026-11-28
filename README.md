@@ -29,7 +29,7 @@ Existing crates cover parsing, rule expansion, time zones and the DAV protocol. 
 
 ## Development
 
-Rust comes from rustup, pinned by `rust-toolchain.toml`; every other tool comes from mise.
+Rust comes from rustup, the latest stable named by `rust-toolchain.toml`; every other tool comes from mise.
 
 ```sh
 mise install && mise run setup && mise run ci

@@ -28,7 +28,7 @@ zizmor = "1.32.0"
 MSRV = "1.91"
 
 [tasks.setup]
-description = "Install the pinned Rust toolchain and the git hooks"
+description = "Install the Rust toolchain rust-toolchain.toml names and the git hooks"
 run = ["rustup toolchain install", "rustup show active-toolchain", "hk install --mise"]
 
 [tasks.fmt]
@@ -44,7 +44,7 @@ description = "Run every hk linter in check mode over the whole tree"
 run = "hk check --all"
 
 [tasks.toolchain]
-description = "Assert rustc matches rust-toolchain.toml and rust-version matches the MSRV"
+description = "Assert rust-toolchain.toml floats on stable and rust-version matches the MSRV"
 run = "cargo xtask toolchain"
 
 [tasks.clippy]
@@ -79,10 +79,22 @@ description = "Run cargo-deny, and prove the deny fixture's copyleft dependency 
 run = ["cargo deny --all-features check", "cargo xtask fixture deny"]
 
 [tasks.msrv]
-description = "Check the workspace builds on the MSRV"
+description = "Check the workspace builds on the MSRV, with the committed and a fresh lockfile"
+# `cargo hack --rust-version` checks each crate with `cargo +<its rust-version>`, which outranks
+# rust-toolchain.toml. The committed lockfile must build on the MSRV, and so must a fresh
+# resolution, which is what a consumer such as Sunrise gets: resolver 3 prefers releases whose
+# `rust-version` the MSRV meets. The fresh lockfile replaces Cargo.lock only for that check, and
+# the trap puts the committed one back.
 run = [
   "rustup toolchain install $MSRV --profile minimal",
   "cargo hack check --rust-version --workspace --all-targets --all-features --locked",
+  '''
+mkdir -p target/msrv
+cp Cargo.lock target/msrv/Cargo.lock
+trap 'mv target/msrv/Cargo.lock Cargo.lock' EXIT
+cargo generate-lockfile
+cargo hack check --rust-version --workspace --all-targets --all-features --locked
+''',
 ]
 
 [tasks.semver]

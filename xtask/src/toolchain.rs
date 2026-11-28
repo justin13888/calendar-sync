@@ -1,9 +1,9 @@
-//! `cargo xtask toolchain`: the toolchain in use is the pinned one, and the MSRV is the agreed one.
+//! `cargo xtask toolchain`: the development toolchain floats on stable, and the MSRV is the agreed
+//! one.
 
 use std::path::Path;
-use std::process::Command;
 
-use crate::{Result, output};
+use crate::Result;
 
 /// The MSRV calendar-sync supports. Sunrise pins Rust 1.91.1 and consumes these crates.
 const MSRV: &str = "1.91";
@@ -12,10 +12,7 @@ pub(crate) fn run(root: &Path) -> Result {
     let toolchain = read(&root.join("rust-toolchain.toml"))?;
     let channel = toml_string(&toolchain, "channel")
         .ok_or("rust-toolchain.toml has no `channel = \"...\"` line")?;
-
-    let rustc = output(Command::new("rustc").arg("-V"), root)?;
-    let version = String::from_utf8_lossy(&rustc.stdout);
-    check_rustc(&version, channel)?;
+    check_channel(channel)?;
 
     let manifest = read(&root.join("Cargo.toml"))?;
     let rust_version =
@@ -34,7 +31,7 @@ pub(crate) fn run(root: &Path) -> Result {
         ));
     }
 
-    println!("toolchain: rustc {channel}, rust-version {MSRV}");
+    println!("toolchain: channel {channel}, rust-version {MSRV}");
     Ok(())
 }
 
@@ -42,14 +39,17 @@ fn read(path: &Path) -> Result<String> {
     std::fs::read_to_string(path).map_err(|e| format!("could not read {}: {e}", path.display()))
 }
 
-/// `rustc -V` prints `rustc 1.99.1 (hash date)`; the version must equal the pinned channel.
-fn check_rustc(version: &str, channel: &str) -> Result {
-    match version.split_whitespace().nth(1) {
-        Some(found) if found == channel => Ok(()),
-        _ => Err(format!(
-            "rustc is `{}`, but rust-toolchain.toml pins {channel}",
-            version.trim()
-        )),
+/// The development toolchain is the latest stable release, not a pinned one: Rust is
+/// forward-compatible, so what a new release breaks is fixed in the repository when it lands.
+/// The MSRV, not the channel, is what consumers rely on.
+fn check_channel(channel: &str) -> Result {
+    if channel == "stable" {
+        Ok(())
+    } else {
+        Err(format!(
+            "rust-toolchain.toml channel is `{channel}`, expected `stable`; the MSRV is \
+             `rust-version` in Cargo.toml, not the development toolchain"
+        ))
     }
 }
 
@@ -71,15 +71,16 @@ mod tests {
 
     #[test]
     fn reads_flat_string_keys() {
-        let text = "# channel = \"no\"\n[toolchain]\nchannel = \"1.99.1\" # pinned\n";
-        assert_eq!(toml_string(text, "channel"), Some("1.99.1"));
+        let text = "# channel = \"no\"\n[toolchain]\nchannel = \"stable\" # floating\n";
+        assert_eq!(toml_string(text, "channel"), Some("stable"));
         assert_eq!(toml_string(text, "missing"), None);
     }
 
     #[test]
-    fn rustc_must_match_channel_exactly() {
-        assert!(check_rustc("rustc 1.99.1 (abc 2026-08-27)\n", "1.99.1").is_ok());
-        assert!(check_rustc("rustc 1.99.10 (abc 2026-08-27)\n", "1.99.1").is_err());
-        assert!(check_rustc("rustc 1.98.0 (abc 2026-08-27)\n", "1.99.1").is_err());
+    fn channel_must_be_stable() {
+        assert!(check_channel("stable").is_ok());
+        assert!(check_channel("1.99.1").is_err());
+        assert!(check_channel("nightly").is_err());
+        assert!(check_channel("nightly-2026-09-25").is_err());
     }
 }
