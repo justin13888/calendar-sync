@@ -14,8 +14,10 @@ updates:
       prefix-development: chore(deps)
     # Minor and patch updates arrive as one pull request; each major update gets its own. Under
     # Cargo semver a minor bump of a 0.x crate (0.4 -> 0.5) is breaking, yet Dependabot still
-    # calls it minor, so it lands in this group too. CI on the group pull request catches the
-    # break; to split one out, add it to an `exclude-patterns` list here.
+    # calls it minor, so it lands in this group too. CI's `lint` job (clippy) on the group pull
+    # request catches a build break; tests run only on the release pull request, so run
+    # `mise run test` on the group pull request before merging it. To split one out, add it to an
+    # `exclude-patterns` list here.
     groups:
       cargo:
         update-types: [minor, patch]

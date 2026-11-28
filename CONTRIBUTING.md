@@ -100,13 +100,28 @@ docs(repo): describe the release flow
 2. Fill in the pull request template.
 3. Every pull request is squash-merged, and its title becomes the commit on `master`. So the title must follow the commit convention too, and it is the changelog entry release-plz writes (see [What the changelog shows](#what-the-changelog-shows)).
 4. CI's `commits` job checks the title and every commit in the pull request. Merge commits from updating the branch are not checked.
-5. `ci-success` is the single required check, and it passes only when every other CI job does. A new CI job must be added to its `needs`.
+5. `ci-success` is the single required check. CI runs in tiers (below), and `ci-success` passes only when every job of the run's tiers succeeded and every other job was skipped. A new CI job joins one tier, and `ci-success` fails until it is wired in:
+   - Every job goes into `ci-success`'s `needs` and into its `LIGHT` or `RELEASE_ONLY` list.
+   - A light or release job also goes into the `freeze` job's `needs`, so the freeze approval is asked only once it has passed.
+   - A release job takes `needs: tier` and `if: needs.tier.outputs.release == 'true'`. A freeze job takes `needs: freeze`.
+
+### CI tiers
+
+An ordinary pull request runs only the light tier, which checks what is costly to undo once merged. The pre-push hook runs the tests locally. The rest runs on the release pull request, before anything publishes.
+
+| Tier | Runs on | Jobs |
+|---|---|---|
+| light | every pull request and every push to `master` | `commits`, `toolchain`, `lint`, `deny`, `purity` |
+| release | the release pull request, on every update | `clippy` (the light `lint` job also runs clippy), `test` on Linux, `doc`, `wasm`, `references`, `package` |
+| freeze | the release pull request, once a maintainer approves the `release-freeze` environment | `test` on macOS and Windows, `msrv`, `caldav` |
+
+`mise run ci` still runs every gate locally.
 
 ## Rules
 
 ### MSRV
 
-The minimum supported Rust version is 1.91, `rust-version` in `Cargo.toml`. [Sunrise](https://github.com/justin13888/Sunrise), the first consumer, pins Rust 1.91.1. `mise run msrv` checks every crate builds on it, so a dependency that needs a newer Rust fails CI. Raise the MSRV only in a pull request of its own that says why, and change all three places it is written together: `rust-version` in `Cargo.toml`, `MSRV` in `mise.toml`, and `MSRV` in `xtask/src/toolchain.rs`. `mise run toolchain` fails while they disagree.
+The minimum supported Rust version is 1.91, `rust-version` in `Cargo.toml`. [Sunrise](https://github.com/justin13888/Sunrise), the first consumer, pins Rust 1.91.1. `mise run msrv` checks every crate builds on it, so a dependency that needs a newer Rust fails the release pull request's freeze tier; run it locally on a dependency update to find out sooner. Raise the MSRV only in a pull request of its own that says why, and change all three places it is written together: `rust-version` in `Cargo.toml`, `MSRV` in `mise.toml`, and `MSRV` in `xtask/src/toolchain.rs`. `mise run toolchain` fails while they disagree.
 
 The toolchain in `rust-toolchain.toml` is separate: it is the latest stable Rust, which development and CI use, and it is not pinned. What a new release breaks (a new clippy lint, say) is fixed in a pull request of its own; run `rustup update` when CI reports a lint you do not see locally.
 
@@ -138,8 +153,8 @@ Releases are automated by [release-plz](https://release-plz.dev/), configured in
 
 1. **A change merges.** Pull requests are squash-merged, so each Conventional Commit title on `master` is one changelog entry.
 2. **The release pull request opens or updates.** The `release-pr` job bumps the versions the commits call for, writes each crate's `CHANGELOG.md` with the rules in `cliff.toml`, and opens or updates one pull request titled `chore(release): release`, labelled `release`. It also runs cargo-semver-checks against each crate's last published version: an incompatible API change it finds forces a breaking version bump, and the pull request body reports it.
-3. **CI runs on it.** The `release-pr` job opens the pull request with the `RELEASE_PLZ_TOKEN` secret rather than the default `GITHUB_TOKEN`, because GitHub starts no `pull_request` workflow for a pull request the default token opens. CI therefore runs on the release pull request like on any other.
-4. **A maintainer reviews and merges it.**
+3. **CI runs on it.** The `release-pr` job opens the pull request with the `RELEASE_PLZ_TOKEN` secret rather than the default `GITHUB_TOKEN`, because GitHub starts no `pull_request` workflow for a pull request the default token opens. CI runs the light and release [tiers](#ci-tiers) on it after every update.
+4. **A maintainer freezes, reviews and merges it.** When `master` is ready to freeze for the release, the maintainer approves the waiting `freeze` job ("Review deployments" on the CI run), and the freeze tier runs. `ci-success` stays pending until it has passed, so the pull request cannot merge before. A later update to the release pull request, or an edit of its title or body, cancels the run, and the new run asks for approval again: approve only once the pull request has stopped changing.
 5. **The crates publish.** On the merge commit, the `release` job gets a short-lived crates.io token through [trusted publishing](https://crates.io/docs/trusted-publishing), publishes every crate whose new version is not on crates.io yet, then creates a `<crate>-v<version>` tag and a GitHub release for each. On any other push it publishes nothing (`release_always = false`).
 
 ### What the changelog shows
@@ -158,9 +173,12 @@ Releases are automated by [release-plz](https://release-plz.dev/), configured in
 
 ### Maintainer setup
 
-The release workflow needs one repository secret:
+Releases need one repository secret and one environment:
 
-- **`RELEASE_PLZ_TOKEN`**: a fine-grained personal access token of a maintainer, for this repository only, with **Contents** and **Pull requests** read and write. The `release-pr` job pushes the release branch and opens the pull request with it, and fails at its first step while the secret is unset. The release pull request is authored by the token's owner, so that maintainer cannot approve it as a review; the ruleset requires no approving review.
+- **`release-freeze`** environment, with the maintainers as required reviewers. CI's `freeze` job waits for its approval. If the environment does not exist, GitHub creates it on first use with no protection, and the freeze tier runs without anyone's approval. Two settings matter:
+  - Leave **Prevent self-review** off while one maintainer both owns the token below and approves. Their own token triggers the run.
+  - Leave **Deployment branches and tags** at "No restriction". A pull request run's ref is `refs/pull/<n>/merge`, which a branch policy rejects.
+- **`RELEASE_PLZ_TOKEN`**: a fine-grained personal access token of a maintainer, for this repository only, with **Contents** and **Pull requests** read and write. The `release-pr` job pushes the release branch and opens the pull request with it, and fails at its first step while the secret is unset. The release pull request is authored by the token's owner, so that maintainer cannot approve it as a review; the ruleset requires no approving review. When the token expires, the `release-pr` job fails until the secret is replaced. If the job fails to update the release branch after a merge that changed `.github/workflows/`, the token also needs **Workflows** read and write.
 
 ### Versions
 
