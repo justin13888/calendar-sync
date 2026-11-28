@@ -4,12 +4,12 @@ Rules for anyone changing this repository, people and coding agents alike. `AGEN
 
 ## Setup
 
-- Rust comes from rustup, pinned by `rust-toolchain.toml`. mise does not manage Rust.
+- Rust comes from rustup: the latest stable, named by `rust-toolchain.toml`. mise does not manage Rust.
 - Every other tool comes from mise, pinned in `mise.toml`.
 
 ```sh
 mise install        # the pinned tools
-mise run setup      # the pinned Rust toolchain, and the hk git hooks
+mise run setup      # the Rust toolchain, and the hk git hooks
 mise run ci         # every gate CI runs, in order
 ```
 
@@ -24,7 +24,7 @@ mise run ci         # every gate CI runs, in order
 | `crates/calendar-sync-ical` | iCalendar mapping. **Pure** |
 | `crates/calendar-sync-google`, `-graph`, `-caldav` | Provider mapping and thin clients; I/O is injected |
 | `crates/calendar-sync-testkit` | Fake providers and recorded fixtures |
-| `fuzz/` | cargo-fuzz targets, a workspace of its own outside the root one. The weekly `scheduled.yml` workflow smokes them on a pinned nightly |
+| `fuzz/` | cargo-fuzz targets, a workspace of its own outside the root one. The weekly `scheduled.yml` workflow smokes them on the latest nightly |
 | `xtask/` | Repository automation (`cargo xtask toolchain`, `purity`, `fixture purity`, `fixture deny`, `references verify`, `references upstream`, `gen-windows-zones [--check]`). Never published |
 | `tests/fixtures/purity`, `tests/fixtures/deny` | Excluded crates that **must fail** clippy and cargo-deny. Do not fix them |
 | `references/` | Vendored specs, the ground truth. A fixed, pinned list; `references/README.md` documents each file. Do not add, drop or edit a file without an issue |
@@ -52,7 +52,7 @@ mise run ci         # every gate CI runs, in order
 
 | Task | What it checks |
 |---|---|
-| `mise run toolchain` | rustc matches `rust-toolchain.toml`; `rust-version` matches the MSRV |
+| `mise run toolchain` | `rust-toolchain.toml` is `stable`; `rust-version` matches the MSRV |
 | `mise run lint` / `mise run fix` | `hk check --all` / `hk fix --all`: rustfmt, clippy, taplo, typos, actionlint, zizmor |
 | `mise run clippy` | clippy on every target and feature, `-D warnings` |
 | `mise run test` | nextest, then doctests |
@@ -60,7 +60,7 @@ mise run ci         # every gate CI runs, in order
 | `mise run wasm` | pure crates build and lint for `wasm32-unknown-unknown` |
 | `mise run purity` | `cargo xtask purity` and the purity fixture |
 | `mise run deny` | cargo-deny and the deny fixture |
-| `mise run msrv` | `cargo hack check --rust-version` on Rust 1.91 |
+| `mise run msrv` | `cargo hack check --rust-version` on Rust 1.91, with the committed and a fresh lockfile |
 | `mise run semver` | cargo-semver-checks on published crates |
 | `mise run references:verify` | offline: `references/` matches `SHA256SUMS`, every file is listed, README and `SHA256SUMS` agree |
 | `mise run gen:windows-zones:check` | the Graph crate's Windows zone table is what `cargo xtask gen-windows-zones` generates from the vendored CLDR data; run in CI's `references` job. `mise run gen:windows-zones` regenerates it |

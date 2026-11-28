@@ -2,7 +2,7 @@
 //!
 //! Commands:
 //!
-//! - `toolchain`: rustc matches `rust-toolchain.toml`, and `rust-version` matches the MSRV.
+//! - `toolchain`: `rust-toolchain.toml` floats on `stable`, and `rust-version` matches the MSRV.
 //! - `purity`: the pure crates' normal dependency graphs and sources hold no I/O, clock or RNG.
 //! - `fixture purity`: clippy rejects the purity fixture's clock and filesystem reads.
 //! - `fixture deny`: cargo-deny rejects the deny fixture's copyleft dependency.

@@ -1,7 +1,9 @@
-# The toolchain every contributor and CI job builds with. rustup reads this file; mise does not manage Rust.
+# The toolchain every contributor and CI job builds with: the latest stable Rust. rustup reads this
+# file; mise does not manage Rust. Rust is forward-compatible, so what a new release breaks (a new
+# lint, say) is fixed here when it lands. `cargo xtask toolchain` asserts the channel stays stable.
 # The MSRV is separate: `rust-version` in Cargo.toml, checked by `mise run msrv`.
 [toolchain]
-channel = "1.99.1"
+channel = "stable"
 components = ["rustfmt", "clippy"]
 targets = ["wasm32-unknown-unknown"]
 profile = "minimal"
