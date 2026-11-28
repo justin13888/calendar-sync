@@ -3,9 +3,9 @@ name: release-plz
 # Release flow (CONTRIBUTING.md): every push to master opens or updates the release pull request;
 # merging that pull request publishes the crates it bumps. Configuration is in release-plz.toml.
 #
-# The release pull request is opened with the RELEASE_PLZ_TOKEN secret, a maintainer's
-# fine-grained personal access token: a pull request opened with the default GITHUB_TOKEN starts no
-# `pull_request` workflow, so ci.yml would never run on it. Crates are published through crates.io
+# The release pull request is opened with RELEASE_PLZ_TOKEN, a secret of the `release-pr`
+# environment holding a maintainer's fine-grained personal access token: a pull request opened
+# with the default GITHUB_TOKEN starts no `pull_request` workflow, so ci.yml would never run on it. Crates are published through crates.io
 # trusted publishing, with no stored registry token.
 
 on:
@@ -93,6 +93,10 @@ jobs:
     name: release-pr
     if: github.repository == 'justin13888/calendar-sync'
     runs-on: ubuntu-latest
+    # RELEASE_PLZ_TOKEN is a secret of this environment, not of the repository, and the
+    # environment deploys only from `master` (CONTRIBUTING.md, "Maintainer setup"). A workflow on
+    # any other branch cannot read the token.
+    environment: release-pr
     # The release branch is pushed and the pull request opened with RELEASE_PLZ_TOKEN, so the
     # default token only reads.
     permissions:

@@ -173,12 +173,13 @@ Releases are automated by [release-plz](https://release-plz.dev/), configured in
 
 ### Maintainer setup
 
-Releases need one repository secret and one environment:
+Releases need two environments and one environment secret:
 
 - **`release-freeze`** environment, with the maintainers as required reviewers. CI's `freeze` job waits for its approval. If the environment does not exist, GitHub creates it on first use with no protection, and the freeze tier runs without anyone's approval. Two settings matter:
   - Leave **Prevent self-review** off while one maintainer both owns the token below and approves. Their own token triggers the run.
   - Leave **Deployment branches and tags** at "No restriction". A pull request run's ref is `refs/pull/<n>/merge`, which a branch policy rejects.
-- **`RELEASE_PLZ_TOKEN`**: a fine-grained personal access token of a maintainer, for this repository only, with **Contents** and **Pull requests** read and write. The `release-pr` job pushes the release branch and opens the pull request with it, and fails at its first step while the secret is unset. The release pull request is authored by the token's owner, so that maintainer cannot approve it as a review; the ruleset requires no approving review. When the token expires, the `release-pr` job fails until the secret is replaced. If the job fails to update the release branch after a merge that changed `.github/workflows/`, the token also needs **Workflows** read and write.
+- **`release-pr`** environment, with **Deployment branches and tags** set to the `master` branch only and no required reviewers. The `release-pr` job runs in it, so only a run on `master` can read its secret.
+- **`RELEASE_PLZ_TOKEN`**, a secret of the `release-pr` environment, not of the repository: a fine-grained personal access token of a maintainer, for this repository only, with **Contents** and **Pull requests** read and write. The `release-pr` job pushes the release branch and opens the pull request with it, and fails at its first step while the secret is unset. The release pull request is authored by the token's owner, so that maintainer cannot approve it as a review; the ruleset requires no approving review. When the token expires, the `release-pr` job fails until the secret is replaced. If the job fails to update the release branch after a merge that changed `.github/workflows/`, the token also needs **Workflows** read and write.
 
 ### Versions
 
