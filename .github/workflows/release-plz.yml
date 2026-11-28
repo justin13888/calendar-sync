@@ -3,8 +3,10 @@ name: release-plz
 # Release flow (CONTRIBUTING.md): every push to master opens or updates the release pull request;
 # merging that pull request publishes the crates it bumps. Configuration is in release-plz.toml.
 #
-# No repository secret is involved. The release pull request is opened with the default
-# GITHUB_TOKEN, and crates are published through crates.io trusted publishing.
+# The release pull request is opened with RELEASE_PLZ_TOKEN, a secret of the `release-pr`
+# environment holding a maintainer's fine-grained personal access token: a pull request opened
+# with the default GITHUB_TOKEN starts no `pull_request` workflow, so ci.yml would never run on it. Crates are published through crates.io
+# trusted publishing, with no stored registry token.
 
 on:
   push:
@@ -91,17 +93,28 @@ jobs:
     name: release-pr
     if: github.repository == 'justin13888/calendar-sync'
     runs-on: ubuntu-latest
+    # RELEASE_PLZ_TOKEN is a secret of this environment, not of the repository, and the
+    # environment deploys only from `master` (CONTRIBUTING.md, "Maintainer setup"). A workflow on
+    # any other branch cannot read the token.
+    environment: release-pr
+    # The release branch is pushed and the pull request opened with RELEASE_PLZ_TOKEN, so the
+    # default token only reads.
     permissions:
-      # Push the release branch
-      contents: write
-      # Open and label the release pull request
-      pull-requests: write
-      # Dispatch ci.yml on the release branch
-      actions: write
+      contents: read
     concurrency:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
     steps:
+      # With the secret unset, release-plz would fail later with a less useful error.
+      # CONTRIBUTING.md, "Maintainer setup", lists the permissions the token needs.
+      - name: Require RELEASE_PLZ_TOKEN
+        env:
+          RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_PLZ_TOKEN" ]; then
+            echo "::error::The RELEASE_PLZ_TOKEN secret is not set (CONTRIBUTING.md, \"Maintainer setup\")"
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -118,21 +131,8 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      # Opened with the PAT, the pull request triggers ci.yml's `pull_request` run like any other.
       - name: Open or update the release pull request
-        id: release-pr
         env:
-          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          output="$(release-plz release-pr --output json)"
-          echo "$output"
-          branch="$(jq -r '.prs[0].head_branch // empty' <<< "$output")"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-      # A pull request opened with GITHUB_TOKEN triggers no `pull_request` workflow, so the
-      # required `ci-success` check would never report on it. A `workflow_dispatch` is exempt from
-      # that rule, and its check runs attach to the release branch's head commit.
-      - name: Run CI on the release branch
-        if: steps.release-pr.outputs.branch != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: ${{ steps.release-pr.outputs.branch }}
-        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          GIT_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: release-plz release-pr

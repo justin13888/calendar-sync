@@ -26,7 +26,7 @@ The crates share one version (`[workspace.package] version` in `Cargo.toml`), so
 
 ## MSRV
 
-The minimum supported Rust version is **1.91**, declared as `rust-version` in each crate and checked in CI by `mise run msrv` (`cargo hack check --rust-version`).
+The minimum supported Rust version is **1.91**, declared as `rust-version` in each crate and checked by `mise run msrv` (`cargo hack check --rust-version`), which CI runs on the release pull request once a maintainer approves its freeze.
 
 - It is raised only together with [Sunrise](https://github.com/justin13888/Sunrise), the first consumer, and never past the Rust that Sunrise pins.
 - Raising it is a breaking change, released in a minor version before 1.0 and called out in the changelog.

@@ -46,9 +46,12 @@ mise run ci         # every gate CI runs, in order
 - Conventional Commits, strictly. `cog.toml` is the single source: types `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, `revert`, `style`. A scope is optional; when given it is one of `facade`, `model`, `recurrence`, `engine`, `ical`, `google`, `graph`, `caldav`, `testkit`, `xtask`, `deps`, `ci`, `release`, `references`, `repo`.
 - The commit-msg hook runs `cog verify`. CI's `commits` job checks every commit in a pull request and its title, because pull requests are squash-merged with the title as the commit message.
 - Never bypass hooks with `--no-verify`. If a hook fails because a tool is missing, run `mise install`.
-- `ci-success` is the single required check. Add any new CI job to its `needs`.
+- `ci-success` is the single required check. A new CI job goes into its `needs` and into its `LIGHT` or `RELEASE_ONLY` list (a job in neither fails it). A light or release job also goes into `freeze`'s `needs`, and a freeze job takes `needs: freeze` (CONTRIBUTING.md, "Pull requests").
+- CI runs in tiers (CONTRIBUTING.md, "CI tiers"). Ordinary pull requests and `master` run only the light tier: `commits`, `toolchain`, `lint`, `deny`, `purity`. Run `mise run ci` locally; CI does not run tests until the release pull request.
 
 ## Gates
+
+CI runs most of these by tier (CONTRIBUTING.md, "CI tiers"). `toolchain`, `lint`, `purity`, `deny` and `commits:check` run on every pull request. `clippy`, `test`, `doc`, `wasm`, `msrv`, `references:verify` and `gen:windows-zones:check` run only on the release pull request. CI never runs `semver`; release-plz runs the same check when it opens the release pull request.
 
 | Task | What it checks |
 |---|---|

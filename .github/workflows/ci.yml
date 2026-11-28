@@ -1,5 +1,18 @@
 name: CI
 
+# CI runs in three tiers (CONTRIBUTING.md, "CI tiers"):
+#
+# - light: every pull request and every push to master. Only what is costly to undo once merged:
+#   the commit convention, the toolchain pin, the linters, the licence policy and purity. The
+#   pre-push hook runs the tests locally.
+# - release: the release pull request only, automatically on every update. Builds, tests on Linux,
+#   docs, wasm, the references and a publish dry run.
+# - freeze: the release pull request only, once a maintainer approves the `release-freeze`
+#   environment, usually when master is ready to freeze for the release. The heaviest jobs: tests
+#   on macOS and Windows, the MSRV, and the CalDAV servers.
+#
+# `ci-success`, the single required check, knows which tier each job belongs to.
+
 on:
   pull_request:
     # `edited` re-runs the checks when a pull request's title changes; the title becomes the
@@ -7,9 +20,6 @@ on:
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [master]
-  # release-plz dispatches this workflow on its release branches, because a pull request opened
-  # with GITHUB_TOKEN does not trigger `pull_request` workflows.
-  workflow_dispatch:
 
 permissions: {}
 
@@ -25,6 +35,30 @@ env:
   MISE_TASK_RUN_AUTO_INSTALL: "false"
 
 jobs:
+  # Decides whether this run is for the release pull request: release-plz opens it from a
+  # `release-plz-` branch of this repository. A fork's branch of the same name gets the light tier.
+  tier:
+    name: tier
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      release: ${{ steps.tier.outputs.release }}
+    steps:
+      - name: Is this the release pull request?
+        id: tier
+        env:
+          RELEASE: >-
+            ${{ github.event_name == 'pull_request'
+            && startsWith(github.head_ref, 'release-plz-')
+            && github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          echo "release pull request: $RELEASE"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------------------------
+  # Light tier: every run.
+  # ---------------------------------------------------------------------------------------------
+
   toolchain:
     name: toolchain
     runs-on: ubuntu-latest
@@ -60,88 +94,6 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - run: mise run lint
-
-  clippy:
-    name: clippy
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install: false
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - run: mise run clippy
-
-  test:
-    name: test (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-    env:
-      NEXTEST_PROFILE: ci
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install_args: aqua:nextest-rs/nextest/cargo-nextest
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - run: mise run test
-
-  doc:
-    name: doc
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install: false
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - run: mise run doc
-
-  wasm:
-    name: wasm
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install: false
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - run: mise run wasm
 
   purity:
     name: purity
@@ -183,100 +135,6 @@ jobs:
       # Checks the workspace, then asserts cargo-deny rejects tests/fixtures/deny.
       - run: mise run deny
 
-  msrv:
-    name: msrv
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install_args: github:taiki-e/cargo-hack
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - run: mise run msrv
-
-  references:
-    name: references
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install: false
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      # Offline: checksums match, every file is listed, README and SHA256SUMS agree.
-      - run: mise run references:verify
-      # The Graph crate's Windows time zone table is what the vendored CLDR data generates.
-      - run: mise run gen:windows-zones:check
-
-  package:
-    name: package
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the Rust toolchain
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      # Packages and verifies every crate with `publish = true`, in dependency order, against a
-      # local registry holding the ones packaged before it; uploads nothing and needs no token.
-      - name: cargo publish --dry-run for every publishable crate
-        run: cargo publish --workspace --dry-run --locked
-
-  # The CalDAV crate's live probes against real servers, run in containers out of process: RustiCal
-  # and Stalwart are AGPL-licensed, so no code of theirs is linked or vendored.
-  caldav:
-    name: caldav (${{ matrix.server }})
-    strategy:
-      fail-fast: false
-      matrix:
-        server: [rustical, stalwart]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install the pinned Rust toolchain
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Build the live probes
-        run: cargo test -p calendar-sync-caldav --locked --test live --no-run
-      - name: Probe ${{ matrix.server }} in a container
-        env:
-          SERVER: ${{ matrix.server }}
-        run: >-
-          sh tests/fixtures/caldav/serve.sh "$SERVER"
-          cargo test -p calendar-sync-caldav --locked --test live -- --ignored --nocapture
-      - name: Server log
-        if: failure()
-        env:
-          SERVER: ${{ matrix.server }}
-        run: docker logs "calendar-sync-$SERVER"
-
   commits:
     name: commits
     runs-on: ubuntu-latest
@@ -310,22 +168,284 @@ jobs:
         if: github.event_name != 'pull_request'
         run: mise run commits:check
 
-  # The single required check: the master ruleset requires exactly this name.
+  # ---------------------------------------------------------------------------------------------
+  # Release tier: the release pull request, automatically. These jobs no longer run on master, so
+  # they save their caches on the release pull request's ref: later updates of the same pull
+  # request reuse them, and each release cycle's new pull request starts cold.
+  # ---------------------------------------------------------------------------------------------
+
+  clippy:
+    name: clippy
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run clippy
+
+  test:
+    name: test (ubuntu-latest)
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NEXTEST_PROFILE: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: aqua:nextest-rs/nextest/cargo-nextest
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run test
+
+  doc:
+    name: doc
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run doc
+
+  wasm:
+    name: wasm
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run wasm
+
+  references:
+    name: references
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install: false
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      # Offline: checksums match, every file is listed, README and SHA256SUMS agree.
+      - run: mise run references:verify
+      # The Graph crate's Windows time zone table is what the vendored CLDR data generates.
+      - run: mise run gen:windows-zones:check
+
+  package:
+    name: package
+    needs: tier
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      # Packages and verifies every crate with `publish = true`, in dependency order, against a
+      # local registry holding the ones packaged before it; uploads nothing and needs no token.
+      - name: cargo publish --dry-run for every publishable crate
+        run: cargo publish --workspace --dry-run --locked
+
+  # ---------------------------------------------------------------------------------------------
+  # Freeze tier: the release pull request, after a maintainer approves.
+  # ---------------------------------------------------------------------------------------------
+
+  # The maintainer's freeze decision. The `release-freeze` environment requires a maintainer's
+  # approval (CONTRIBUTING.md, "Maintainer setup"), and this job waits for it only once the light
+  # and release tiers have passed. One approval releases every freeze job in the run. A new push to
+  # the release pull request cancels the waiting run, and the next one asks again.
+  freeze:
+    name: freeze
+    needs: [tier, toolchain, lint, purity, deny, commits, clippy, test, doc, wasm, references, package]
+    if: needs.tier.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    environment: release-freeze
+    permissions: {}
+    steps:
+      - name: A maintainer approved the freeze
+        run: echo "release-freeze approved; running the freeze tier"
+
+  test-cross:
+    name: test (${{ matrix.os }})
+    needs: freeze
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      NEXTEST_PROFILE: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: aqua:nextest-rs/nextest/cargo-nextest
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run test
+
+  msrv:
+    name: msrv
+    needs: freeze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the Rust toolchain
+        run: rustup toolchain install
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: github:taiki-e/cargo-hack
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: mise run msrv
+
+  # The CalDAV crate's live probes against real servers, run in containers out of process: RustiCal
+  # and Stalwart are AGPL-licensed, so no code of theirs is linked or vendored.
+  caldav:
+    name: caldav (${{ matrix.server }})
+    needs: freeze
+    strategy:
+      fail-fast: false
+      matrix:
+        server: [rustical, stalwart]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Build the live probes
+        run: cargo test -p calendar-sync-caldav --locked --test live --no-run
+      - name: Probe ${{ matrix.server }} in a container
+        env:
+          SERVER: ${{ matrix.server }}
+        run: >-
+          sh tests/fixtures/caldav/serve.sh "$SERVER"
+          cargo test -p calendar-sync-caldav --locked --test live -- --ignored --nocapture
+      - name: Server log
+        if: failure()
+        env:
+          SERVER: ${{ matrix.server }}
+        run: docker logs "calendar-sync-$SERVER"
+
+  # The single required check: the master ruleset requires exactly this name. It knows each job's
+  # tier: a light job must succeed on every run; a release or freeze job must succeed on the release
+  # pull request and must have been skipped on any other run. A job in `needs` but in neither list
+  # fails the check, so a new job cannot join without a tier.
   ci-success:
     name: ci-success
     if: always()
-    needs: [toolchain, lint, clippy, test, doc, wasm, purity, deny, msrv, references, package, caldav, commits]
+    needs:
+      - tier
+      - toolchain
+      - lint
+      - purity
+      - deny
+      - commits
+      - clippy
+      - test
+      - doc
+      - wasm
+      - references
+      - package
+      - freeze
+      - test-cross
+      - msrv
+      - caldav
     runs-on: ubuntu-latest
     permissions: {}
+    env:
+      LIGHT: tier toolchain lint purity deny commits
+      RELEASE_ONLY: clippy test doc wasm references package freeze test-cross msrv caldav
     steps:
-      - name: Every job succeeded
+      - name: Every job of this run's tiers succeeded
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS: ${{ toJSON(needs) }}
+          IS_RELEASE: ${{ needs.tier.outputs.release }}
         run: |
-          echo "job results: $RESULTS"
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              echo "a required job did not succeed"
-              exit 1
+          set -o pipefail
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          if [ "$IS_RELEASE" = true ]; then
+            release_want=success
+          else
+            release_want=skipped
+          fi
+          echo "release pull request: ${IS_RELEASE:-unknown}"
+          status=0
+          check() {
+            result="$(jq -r --arg job "$1" '.[$job].result // "missing"' <<< "$NEEDS")"
+            if [ "$result" != "$2" ]; then
+              echo "::error::$1 is $result, expected $2"
+              status=1
             fi
-          done
+          }
+          for job in $LIGHT; do check "$job" success; done
+          for job in $RELEASE_ONLY; do check "$job" "$release_want"; done
+          # Every job in `needs` must belong to a tier.
+          unlisted="$(jq -r --arg listed "$LIGHT $RELEASE_ONLY" \
+            '($listed | split(" ")) as $l | keys[] | select(. as $k | $l | index($k) | not)' \
+            <<< "$NEEDS")"
+          if [ -n "$unlisted" ]; then
+            echo "::error::jobs with no tier in ci-success: $unlisted"
+            status=1
+          fi
+          exit "$status"
