@@ -1,0 +1,139 @@
+{
+  "format": 1,
+  "provider": "caldav",
+  "description": "Live probe: series",
+  "exchanges": [
+    {
+      "request": {
+        "method": "OPTIONS",
+        "url": "/dav/cal/admin@example.com/default/"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "dav": "1, 2, 3, access-control, extended-mkcol, calendar-access, calendar-auto-schedule, calendar-no-timezone, addressbook"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PROPFIND",
+        "url": "/dav/cal/admin@example.com/default/",
+        "headers": {
+          "content-type": "application/xml; charset=utf-8",
+          "depth": "0"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<D:propfind xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\"><D:prop><D:supported-report-set/><C:supported-calendar-component-set/><D:sync-token/></D:prop></D:propfind>"
+        }
+      },
+      "response": {
+        "status": 207,
+        "headers": {
+          "content-type": "application/xml; charset=utf-8"
+        },
+        "body": {
+          "kind": "text",
+          "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><D:multistatus xmlns:D=\"DAV:\" xmlns:A=\"urn:ietf:params:xml:ns:caldav\"><D:response><D:href>/dav/cal/admin%40example.com/default/</D:href><D:propstat><D:prop><D:supported-report-set><D:supported-report><D:report><D:sync-collection/></D:report></D:supported-report><D:supported-report><D:report><D:acl-principal-prop-set/></D:report></D:supported-report><D:supported-report><D:report><D:principal-match/></D:report></D:supported-report><D:supported-report><D:report><D:expand-property/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-query/></D:report></D:supported-report><D:supported-report><D:report><A:calendar-multiget/></D:report></D:supported-report><D:supported-report><D:report><A:free-busy-query/></D:report></D:supported-report></D:supported-report-set><A:supported-calendar-component-set><A:comp name=\"VEVENT\"/><A:comp name=\"VTODO\"/><A:comp name=\"VJOURNAL\"/><A:comp name=\"VFREEBUSY\"/><A:comp name=\"VTIMEZONE\"/><A:comp name=\"VALARM\"/><A:comp name=\"STANDARD\"/><A:comp name=\"DAYLIGHT\"/><A:comp name=\"VAVAILABILITY\"/><A:comp name=\"AVAILABLE\"/><A:comp name=\"PARTICIPANT\"/><A:comp name=\"VLOCATION\"/><A:comp name=\"VRESOURCE\"/></A:supported-calendar-component-set><D:sync-token>urn:stalwart:davsync:6</D:sync-token></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics"
+      },
+      "response": {
+        "status": 404
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics",
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8",
+          "if-none-match": "*"
+        },
+        "body": {
+          "kind": "text",
+          "content": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//probe//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nDTEND:20300107T153000Z\r\nRRULE:FREQ=DAILY;COUNT=5\r\nSUMMARY:Synthetic text 1\r\nX-CALENDAR-SYNC-PROBE:kept\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nRECURRENCE-ID:20300109T150000Z\r\nDTSTART:20300109T160000Z\r\nDTEND:20300109T163000Z\r\nSUMMARY:Synthetic text 2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "etag": "\"1388133145\""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8",
+          "etag": "\"1388133145\""
+        },
+        "body": {
+          "kind": "text",
+          "content": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//probe//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nDTEND:20300107T153000Z\r\nRRULE:FREQ=DAILY;COUNT=5\r\nSUMMARY:Synthetic text 1\r\nX-CALENDAR-SYNC-PROBE:kept\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nRECURRENCE-ID:20300109T150000Z\r\nDTSTART:20300109T160000Z\r\nDTEND:20300109T163000Z\r\nSUMMARY:Synthetic text 3\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics",
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8",
+          "if-match": "\"1388133145\""
+        },
+        "body": {
+          "kind": "text",
+          "content": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//probe//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nDTEND:20300107T153000Z\r\nRRULE:FREQ=DAILY;COUNT=5\r\nSUMMARY:Synthetic text 4\r\nX-CALENDAR-SYNC-PROBE:kept\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nRECURRENCE-ID:20300109T150000Z\r\nDTSTART:20300109T160000Z\r\nDTEND:20300109T163000Z\r\nSUMMARY:Synthetic text 3\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+          "etag": "\"2578853954\""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8",
+          "etag": "\"2578853954\""
+        },
+        "body": {
+          "kind": "text",
+          "content": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//calendar-sync//probe//EN\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nDTSTART:20300107T150000Z\r\nDTEND:20300107T153000Z\r\nRRULE:FREQ=DAILY;COUNT=5\r\nSUMMARY:Synthetic text 4\r\nX-CALENDAR-SYNC-PROBE:kept\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:csedite1p6uoj55lpmasj9clpg@calendar-sync\r\nDTSTAMP:20261120T000000Z\r\nRECURRENCE-ID:20300109T150000Z\r\nDTSTART:20300109T160000Z\r\nDTEND:20300109T163000Z\r\nSUMMARY:Synthetic text 3\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/dav/cal/admin@example.com/default/csedite1p6uoj55lpmasj9clpg.ics",
+        "headers": {
+          "if-match": "\"2578853954\""
+        }
+      },
+      "response": {
+        "status": 204
+      }
+    }
+  ]
+}
+

@@ -1,6 +1,12 @@
 # A crate that MUST fail `cargo deny check licenses`: it depends on a GPL-3.0 crate, which the
 # workspace deny.toml does not allow. `cargo xtask fixture deny` asserts the rejection. Excluded
 # from the workspace and never built by it.
+#
+# An empty workspace of its own, so cargo stops here and never adopts a workspace above it: in a
+# checkout nested inside another (a git worktree under the main checkout) it otherwise finds the
+# outer one and fails before cargo-deny reads the licence.
+[workspace]
+
 [package]
 name = "deny-fixture"
 version = "0.0.0"
